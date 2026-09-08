@@ -7,6 +7,7 @@ import { MarketOverviewPage } from './pages/MarketOverviewPage';
 import { PortfolioPage } from './pages/PortfolioPage';
 import { BacktestingPage } from './pages/BacktestingPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { ChartPage } from './pages/ChartPage';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { NotificationCenterSidebar } from './components/NotificationCenterSidebar';
 import { apiService } from './services/api';
@@ -318,6 +319,10 @@ export const App: React.FC = () => {
           <Route
             path="/settings"
             element={<SettingsPage />}
+          />
+          <Route
+            path="/chart/:ticker"
+            element={<ChartPage />}
           />
           {/* Catch-all fallback redirect */}
           <Route path="*" element={<Navigate to="/" replace />} />

@@ -1,11 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { createChart, ColorType, IChartApi, ISeriesApi, LineStyle, CrosshairMode } from 'lightweight-charts';
 import { ChartData, ChartStyle, DrawingToolType, DrawingObject, PredictionResult } from '../types';
 import { apiService } from '../services/api';
-import { 
-  Loader2, AlertCircle, RefreshCw, SlidersHorizontal, 
+import {
+  Loader2, AlertCircle, RefreshCw, SlidersHorizontal,
   Camera, Zap, Target, ShieldAlert, Crosshair, TrendingUp,
-  BarChart2, Activity, Layers, Trash2, Eye, EyeOff, Bookmark
+  BarChart2, Activity, Layers, Trash2, Eye, EyeOff, Bookmark, Maximize2
 } from 'lucide-react';
 import {
   calculateEMA, calculateSMA, calculateRSI, calculateMACD, 
@@ -26,6 +27,10 @@ interface TechnicalChartProps {
   prediction?: PredictionResult;
   activeTimeframe?: string;
   onTimeframeChange?: (tf: string) => void;
+  /** Main pane height in px. Defaults to the compact dashboard-embedded
+   * size (340/440 depending on subpanes) when omitted - pass a larger
+   * value for a dedicated full-page chart workspace. */
+  mainHeight?: number;
 }
 
 interface EnabledIndicators {
@@ -61,13 +66,16 @@ const CHART_STYLES: { label: string; value: ChartStyle; icon: string }[] = [
   { label: 'Baseline', value: 'baseline', icon: '⚖️' },
 ];
 
-export const TechnicalChart: React.FC<TechnicalChartProps> = ({ 
-  chartData: propChartData, 
+export const TechnicalChart: React.FC<TechnicalChartProps> = ({
+  chartData: propChartData,
   ticker = 'RELIANCE.NS',
   prediction,
   activeTimeframe: propActiveTimeframe,
-  onTimeframeChange
+  onTimeframeChange,
+  mainHeight
 }) => {
+  const location = useLocation();
+  const isOnDedicatedChartPage = location.pathname.startsWith('/chart/');
   const mainChartContainerRef = useRef<HTMLDivElement>(null);
   const rsiChartContainerRef = useRef<HTMLDivElement>(null);
   const macdChartContainerRef = useRef<HTMLDivElement>(null);
@@ -290,7 +298,8 @@ export const TechnicalChart: React.FC<TechnicalChartProps> = ({
     const validCloses = candlePoints.map(c => c.close);
     const validVolumes = candlePoints.map(c => c.volume || 1000);
 
-    const mainChartHeight = indicators.rsi || indicators.macd ? 340 : 440;
+    const defaultHeight = indicators.rsi || indicators.macd ? 340 : 440;
+    const mainChartHeight = mainHeight ?? defaultHeight;
     const mainChart = createChart(mainChartContainerRef.current, {
       width: mainChartContainerRef.current.clientWidth,
       height: mainChartHeight,
@@ -635,7 +644,7 @@ export const TechnicalChart: React.FC<TechnicalChartProps> = ({
     // currentChartData intentionally excluded: trailing-bar updates from quote
     // polling are handled by the data-sync effect above without a full rebuild.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ticker, activeTimeframe, chartDataSignature, indicators, chartStyle, showAiOverlays, showEventMarkers, drawings, activeDrawingTool]);
+  }, [ticker, activeTimeframe, chartDataSignature, indicators, chartStyle, showAiOverlays, showEventMarkers, drawings, activeDrawingTool, mainHeight]);
 
   return (
     <div className="bg-surface border border-borderDark p-5 rounded-2xl flex flex-col gap-4 font-sans shadow-xl">
@@ -702,6 +711,18 @@ export const TechnicalChart: React.FC<TechnicalChartProps> = ({
             <Camera className="w-3.5 h-3.5 text-brand" />
             <span className="hidden sm:inline">Export</span>
           </button>
+
+          {/* Full Chart Workspace Link - hidden when already on that page */}
+          {!isOnDedicatedChartPage && (
+            <Link
+              to={`/chart/${ticker}?timeframe=${activeTimeframe}`}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand/15 border border-brand/40 text-brand hover:bg-brand/25 text-xs font-mono font-bold transition-all shadow-sm"
+              title="Open this chart in a dedicated full-height workspace"
+            >
+              <Maximize2 className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Full Chart</span>
+            </Link>
+          )}
         </div>
       </div>
 
