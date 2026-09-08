@@ -5,6 +5,7 @@ import { apiService } from '../services/api';
 import { DeterministicAnalysisReport } from '../types';
 import { TechnicalChart } from '../components/TechnicalChart';
 import { useWatchlist } from '../context/WatchlistContext';
+import { SearchBar } from '../components/search/SearchBar';
 
 // Reserve space for the top nav bar and this page's own compact price
 // strip, so the chart gets everything else - the point of this page is
@@ -57,6 +58,13 @@ export const ChartPage: React.FC = () => {
     setSearchParams({ timeframe: tf });
   };
 
+  const handleSwitchTicker = (newTicker: string) => {
+    const clean = newTicker.toUpperCase().trim();
+    if (clean && clean !== ticker) {
+      navigate(`/chart/${clean}?timeframe=${activeTimeframe}`);
+    }
+  };
+
   const favorite = isFavorite(ticker);
   const changePct = report ? ((report.chart_data.close[report.chart_data.close.length - 1] -
     report.chart_data.close[report.chart_data.close.length - 2]) /
@@ -105,6 +113,15 @@ export const ChartPage: React.FC = () => {
             {report.scores.recommendation}
           </span>
         )}
+
+        <div className="ml-auto w-full sm:w-64">
+          <SearchBar
+            onSearch={handleSwitchTicker}
+            placeholder="Switch symbol..."
+            compact
+            className="w-full"
+          />
+        </div>
       </div>
 
       {/* Full-height chart workspace */}
