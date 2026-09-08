@@ -25,9 +25,20 @@ logger = logging.getLogger("AIEquityResearchPlatform")
 
 router = APIRouter(prefix="/market", tags=["Market Opportunities"])
 
-# In-Memory Cache Key for Top Opportunities
-TOP_OPPORTUNITIES_CACHE_KEY = "top_market_opportunities"
 TOP_OPPORTUNITIES_TTL_SECONDS = 900  # 15 minutes TTL
+
+# InMemoryLiveCache.get_analysis()/set_analysis() are keyed by (ticker,
+# interval) and consider a cached report fresh until a new candle for that
+# ticker completes - for "1d" that's once per trading day, and while the
+# market is closed they never expire at all. That's the wrong staleness
+# model for this endpoint's aggregate "top opportunities" response, which
+# needs the flat TOP_OPPORTUNITIES_TTL_SECONDS above (declared for exactly
+# this but never actually read before this fix - the endpoint was calling
+# get_analysis()/set_analysis() instead, so the scan could go stale for a
+# full trading day, or indefinitely with the market closed, despite the
+# UI describing it as a live feed). Tracked as a small module-level cache
+# instead, independent of the per-ticker candle-completion cache above.
+_top_opportunities_cache: Dict[str, Any] = {"data": None, "timestamp": 0.0}
 
 # Stock Universe Catalog Path
 SYMBOLS_JSON_PATH = os.path.join("frontend", "src", "components", "search", "symbols.json")
@@ -118,9 +129,10 @@ def get_top_opportunities(
     """
     # 1. Check cache first unless force_refresh is requested
     if not force_refresh:
-        cached_data = live_cache.get_analysis(TOP_OPPORTUNITIES_CACHE_KEY, "1d")
-        if cached_data is not None:
-            logger.info("Top Opportunities cache HIT")
+        cached_data = _top_opportunities_cache["data"]
+        cache_age = time.time() - _top_opportunities_cache["timestamp"]
+        if cached_data is not None and cache_age < TOP_OPPORTUNITIES_TTL_SECONDS:
+            logger.info(f"Top Opportunities cache HIT (age {cache_age:.0f}s)")
             return TopOpportunitiesResponse(**cached_data)
 
     logger.info("Computing Top Opportunities across market watchlist...")
@@ -213,8 +225,9 @@ def get_top_opportunities(
         opportunities=final_cards
     )
 
-    # 3. Store in live cache for 15 minutes
-    live_cache.set_analysis(TOP_OPPORTUNITIES_CACHE_KEY, "1d", datetime.now(live_cache.timezone), response.model_dump())
+    # 3. Store in the module-level cache for TOP_OPPORTUNITIES_TTL_SECONDS
+    _top_opportunities_cache["data"] = response.model_dump()
+    _top_opportunities_cache["timestamp"] = time.time()
 
     return response
 

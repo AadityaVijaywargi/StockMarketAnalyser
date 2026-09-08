@@ -263,12 +263,16 @@ def calculate_trade_signal(
             reasons.append(f"Protects unrealized gains while maintaining upside exposure toward ₹{next_resistance_target:,.2f}.")
     else:
         # MODE 1 – BUY ANALYSIS (Pre-Entry Mode for users without position)
-        if current_price >= target_price:
-            signal = "SELL NOW"
-            signal_type = "SELL_NOW"
-            lifecycle_status = "TARGET_REACHED"
-            status_note = f"Target Achieved (+{potential_return_pct}%). Consider locking in profits."
-        elif current_price > entry_zone_high * 1.015:
+        # Note: target_price is freshly computed a few lines above as
+        # current_price * (1 + move_high_pct/100), and move_high_pct is
+        # always positive for every timeframe in tf_params_map - so
+        # target_price is always strictly greater than current_price here.
+        # A "current_price >= target_price" check can therefore never be
+        # true in this pre-entry branch (there's no previously-tracked
+        # target to compare against, only this call's freshly-derived one);
+        # that dead TARGET_REACHED path has been removed rather than left
+        # in place looking like working logic.
+        if current_price > entry_zone_high * 1.015:
             signal = "WAIT"
             signal_type = "WAIT"
             lifecycle_status = "MISSED_ENTRY"
