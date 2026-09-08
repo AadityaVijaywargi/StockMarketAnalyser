@@ -16,6 +16,79 @@ class DeterministicPredictionEngine(BasePredictionEngine):
 
     HORIZON_MOVE_MULTIPLIERS = {"5m": 0.25, "10m": 0.35, "15m": 0.45, "30m": 0.65, "1d": 1.0, "1w": 2.2, "1mo": 4.5}
 
+    @staticmethod
+    def _find_col(features_df: pd.DataFrame, prefix: str) -> Any:
+        return next((c for c in features_df.columns if c.startswith(prefix)), None)
+
+    def _describe_signal(
+        self, name: str, value: float, features_df: pd.DataFrame, close: float, market_context: Dict[str, Any]
+    ) -> str:
+        """
+        Turns a category score into a specific, numeric explanation of what's
+        actually driving it - pulling the underlying indicator value out of
+        features_df where one exists, rather than just restating the score.
+        """
+        direction_word = "bullish" if value >= 55.0 else ("bearish" if value <= 45.0 else "neutral")
+
+        if name == "momentum":
+            rsi_col = self._find_col(features_df, "RSI_")
+            macd_col = self._find_col(features_df, "MACD_")
+            macd_sig_col = self._find_col(features_df, "MACD_Signal_")
+            parts = []
+            if rsi_col is not None and pd.notnull(features_df[rsi_col].iloc[-1]):
+                rsi = float(features_df[rsi_col].iloc[-1])
+                zone = "overbought" if rsi >= 70 else ("oversold" if rsi <= 30 else "neutral range")
+                parts.append(f"RSI at {rsi:.1f} ({zone})")
+            if macd_col is not None and macd_sig_col is not None:
+                macd = features_df[macd_col].iloc[-1]
+                sig = features_df[macd_sig_col].iloc[-1]
+                if pd.notnull(macd) and pd.notnull(sig):
+                    parts.append("MACD above signal line" if macd > sig else "MACD below signal line")
+            detail = ", ".join(parts) if parts else f"momentum score {value:.0f}/100"
+            return f"Momentum is {direction_word} ({detail})"
+
+        if name == "price_action":
+            sma50_col = self._find_col(features_df, "SMA_50")
+            sma200_col = self._find_col(features_df, "SMA_200")
+            parts = []
+            if sma50_col and pd.notnull(features_df[sma50_col].iloc[-1]):
+                sma50 = float(features_df[sma50_col].iloc[-1])
+                dist = ((close - sma50) / sma50) * 100.0
+                parts.append(f"price {abs(dist):.1f}% {'above' if dist >= 0 else 'below'} the 50-day average")
+            if sma50_col and sma200_col and pd.notnull(features_df[sma50_col].iloc[-1]) and pd.notnull(features_df[sma200_col].iloc[-1]):
+                sma50 = float(features_df[sma50_col].iloc[-1])
+                sma200 = float(features_df[sma200_col].iloc[-1])
+                parts.append("50/200-day trend structure bullish" if sma50 > sma200 else "50/200-day trend structure bearish")
+            detail = ", ".join(parts) if parts else f"trend score {value:.0f}/100"
+            return f"Trend structure is {direction_word} ({detail})"
+
+        if name == "volume":
+            rvol = float(features_df["Relative_Volume"].iloc[-1]) if "Relative_Volume" in features_df.columns and pd.notnull(features_df["Relative_Volume"].iloc[-1]) else None
+            if rvol is not None:
+                return f"Volume is {rvol:.2f}x the average ({'above' if rvol >= 1.0 else 'below'} typical participation)"
+            return f"Volume score {value:.0f}/100"
+
+        if name == "volatility":
+            atr_col = self._find_col(features_df, "ATR_")
+            if atr_col and pd.notnull(features_df[atr_col].iloc[-1]) and close > 0:
+                atr_pct = (float(features_df[atr_col].iloc[-1]) / close) * 100.0
+                return f"ATR is {atr_pct:.2f}% of price ({'elevated' if atr_pct > 3.0 else 'contained'} volatility)"
+            return f"Volatility score {value:.0f}/100"
+
+        if name == "market":
+            nifty_dir = market_context.get("nifty", {}).get("direction", "SIDEWAYS")
+            nifty_str = market_context.get("nifty", {}).get("strength", 50.0)
+            return f"Nifty regime is {nifty_dir.lower()} (strength {nifty_str:.0f}/100), setting the broader market backdrop"
+
+        if name == "sector":
+            rs = market_context.get("relative_strength_rating", value)
+            return f"Relative strength vs Nifty is {rs:.0f}/100 ({'outperforming' if rs >= 55 else 'underperforming' if rs <= 45 else 'in line with'} the index)"
+
+        if name == "sentiment":
+            return f"News sentiment reads {direction_word} ({value:.0f}/100)"
+
+        return f"{name.replace('_', ' ').title()} signal is {direction_word} ({value:.0f}/100)"
+
     def _event_signal(self, intelligence_pack: Any) -> Tuple[float, float, List[str], bool]:
         events = getattr(intelligence_pack, "key_events", []) if intelligence_pack else []
         sentiment = getattr(getattr(intelligence_pack, "overall_sentiment", None), "primary_sentiment", "Neutral") if intelligence_pack else "Neutral"
@@ -114,20 +187,31 @@ class DeterministicPredictionEngine(BasePredictionEngine):
         target = close * (1.0 + move_pct / 100.0) if direction != "NEUTRAL" else close * 1.02
         stop = close * (1.0 - move_pct / 100.0) if direction != "NEUTRAL" else close * 0.98
 
-        # Synthesize clear, bulleted reasons
-        reasons = list(event_reasons)
-        if scores.overall_score >= 60.0:
-            reasons.append(f"✓ Technical score strong ({scores.overall_score:.0f}/100)")
-        elif scores.overall_score <= 40.0:
-            reasons.append(f"⚠ Technical score weak ({scores.overall_score:.0f}/100)")
+        # Synthesize specific, ranked reasons: for every signal category, work
+        # out how far it pulled the probability from a neutral 50 (its
+        # weighted contribution delta), rank by the size of that pull, and
+        # explain the biggest movers with the actual underlying indicator
+        # values - not just the category score restated.
+        contributions = sorted(
+            (
+                (name, (value - 50.0) * weights.get(name, 0.0), value)
+                for name, value in signal_scores.items()
+                if name != "news"  # news already covered by event_reasons below
+            ),
+            key=lambda item: abs(item[1]),
+            reverse=True
+        )
 
-        if scores.volume.value >= 65.0:
-            reasons.append(f"✓ High volume accumulation verified ({scores.volume.value:.0f}/100)")
-        if scores.momentum.value >= 65.0:
-            reasons.append(f"✓ Bullish momentum acceleration ({scores.momentum.value:.0f}/100)")
+        reasons = list(event_reasons)
+        for name, delta, value in contributions[:4]:
+            if abs(delta) < 0.3:
+                continue  # negligible pull, not worth a bullet
+            marker = "✓" if delta > 0 else "⚠"
+            description = self._describe_signal(name, value, features_df, close, market_context)
+            reasons.append(f"{marker} {description} — {'+' if delta > 0 else ''}{delta:.1f}pt pull on the {probability:.0f}% probability (weight {weights.get(name, 0.0)*100:.0f}%)")
 
         if not reasons:
-            reasons = ["✓ Market signals balanced", f"Technical score {scores.overall_score:.0f}/100"]
+            reasons = ["✓ Market signals balanced across all categories", f"Blended technical score {scores.overall_score:.0f}/100"]
 
         return PredictionResult(
             ticker=ticker,
@@ -140,7 +224,7 @@ class DeterministicPredictionEngine(BasePredictionEngine):
             target_price=round(target, 2),
             stop_loss=round(stop, 2),
             risk=risk.level,
-            reasons=reasons[:6],
+            reasons=reasons[:7],
             signal_scores={key: round(value, 2) for key, value in signal_scores.items()},
             event_override_applied=event_override,
             last_updated=datetime.now().strftime("%H:%M:%S")
