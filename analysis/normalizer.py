@@ -82,6 +82,9 @@ class TickerNormalizer:
     @classmethod
     def normalize(cls, query: str) -> str:
         clean = query.strip().upper()
+        if clean.startswith("^"):
+            return clean
+
         # Remove common suffixes before lookup
         if clean.endswith(".NS"):
             clean_base = clean[:-3]

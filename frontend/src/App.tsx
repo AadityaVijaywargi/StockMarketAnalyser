@@ -2,7 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { LandingPage } from './pages/LandingPage';
 import { DashboardPage } from './pages/DashboardPage';
+import { WatchlistPage } from './pages/WatchlistPage';
+import { MarketOverviewPage } from './pages/MarketOverviewPage';
+import { PortfolioPage } from './pages/PortfolioPage';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { NotificationCenterSidebar } from './components/NotificationCenterSidebar';
 import { apiService } from './services/api';
 import { DeterministicAnalysisReport } from './types';
 import { Loader2, AlertCircle, X } from 'lucide-react';
@@ -115,9 +119,8 @@ const DashboardRouteWrapper: React.FC<{
           }
 
           if (isNewStock) {
-            // New stock load failed completely: redirect to home and show banner
+            // New stock load failed completely: display error banner in dashboard without benchmark redirect
             setError(errMsg);
-            navigate('/');
           } else {
             // Timeframe switch failed: display warning in-dashboard, keep old report visible
             setTimeframeError(`Unable to load ${timeframe.toUpperCase()} data.`);
@@ -233,7 +236,7 @@ export const App: React.FC = () => {
   };
 
   return (
-    <div className="flex bg-background text-white min-h-screen">
+    <div className="flex bg-background text-white min-h-screen overflow-hidden">
       {/* 1. Navigation Sidebar */}
       <Sidebar onSearchClick={handleReset} />
 
@@ -284,10 +287,35 @@ export const App: React.FC = () => {
               />
             } 
           />
+          <Route 
+            path="/watchlist" 
+            element={
+              <WatchlistPage 
+                onSearch={handleSearch} 
+                isLoading={false} 
+              />
+            } 
+          />
+          <Route 
+            path="/market" 
+            element={
+              <MarketOverviewPage 
+                onSearch={handleSearch} 
+                isLoading={false} 
+              />
+            } 
+          />
+          <Route 
+            path="/portfolio" 
+            element={<PortfolioPage />} 
+          />
           {/* Catch-all fallback redirect */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>
+
+      {/* 3. Persistent Right Notification Sidebar */}
+      <NotificationCenterSidebar />
     </div>
   );
 };

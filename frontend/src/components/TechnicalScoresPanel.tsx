@@ -39,9 +39,9 @@ export const TechnicalScoresPanel: React.FC<TechnicalScoresPanelProps> = ({ scor
           <div className="flex flex-col text-right">
             <span className="text-xs text-textMuted font-mono">RECOMMENDATION</span>
             <span className={`text-xl font-black mt-0.5 ${
-              scores.recommendation === 'BUY' ? 'text-bullish' : scores.recommendation === 'WATCH' ? 'text-yellow-500' : 'text-bearish'
+              ['STRONG BUY', 'BUY', 'ACCUMULATE'].includes(scores.recommendation) ? 'text-bullish' : ['REDUCE', 'SELL', 'STRONG SELL'].includes(scores.recommendation) ? 'text-bearish' : 'text-yellow-500'
             }`}>
-              {scores.recommendation || 'WATCH'}
+              {scores.recommendation || 'HOLD'}
             </span>
           </div>
 

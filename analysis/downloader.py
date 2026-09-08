@@ -30,13 +30,16 @@ class YahooDownloader(BaseDownloader):
         # Copy to avoid modifications to slices
         df = df.copy()
 
-        # Ensure index is timezone-naive date strings or datetime
+        # Ensure index handling preserves daily naive timestamps while converting intraday timestamps to IST
         if isinstance(df.index, pd.DatetimeIndex):
-            # Normalize to UTC first then remove tz info
             if df.index.tz is not None:
-                df.index = df.index.tz_convert('UTC').tz_localize(None)
+                df.index = df.index.tz_convert('Asia/Kolkata').tz_localize(None)
+                if (df.index.hour == 5).all() and (df.index.minute == 30).all():
+                    df.index = df.index.normalize()
             else:
-                df.index = df.index.tz_localize(None)
+                has_time = (df.index.hour != 0).any() or (df.index.minute != 0).any()
+                if has_time:
+                    df.index = (df.index.tz_localize('UTC').tz_convert('Asia/Kolkata')).tz_localize(None)
 
         # Drop duplicate index entries
         df = df[~df.index.duplicated(keep='last')]
@@ -90,15 +93,8 @@ class YahooDownloader(BaseDownloader):
             if years is not None:
                 period = f"{years}y"
             else:
-                # Timeframe-aware lookup
-                if interval == "1m":
-                    period = "7d"
-                elif interval in ["5m", "15m", "30m"]:
-                    period = "60d"
-                elif interval in ["60m", "1h"]:
-                    period = "730d"
-                else:
-                    period = "5y"
+                # Default to full 5-year daily dataset for analysis engine
+                period = "5y"
         
         logger.info(
             f"Downloading ticker data from yfinance: {ticker} (Interval: {interval}, Period: {period})", 

@@ -1,0 +1,45 @@
+from typing import List, Optional
+from pydantic import BaseModel, Field
+
+class TradeSignalModel(BaseModel):
+    """
+    Actionable Real-Time Trade Signal computed deterministically from 
+    ATR, RSI, MACD, Moving Averages, S/R zones, and Volatility.
+    """
+    signal: str = Field(..., description="BUY NOW, WAIT, SELL NOW, or AVOID")
+    signal_type: str = Field(..., description="BUY_NOW, WAIT, SELL_NOW, or AVOID")
+    current_price: float = Field(..., description="Current asset price")
+    entry_zone_low: Optional[float] = Field(default=None, description="Lower boundary of suggested Entry Zone")
+    entry_zone_high: Optional[float] = Field(default=None, description="Upper boundary of suggested Entry Zone")
+    target_price: Optional[float] = Field(default=None, description="Suggested profit target price")
+    stop_loss_price: Optional[float] = Field(default=None, description="Suggested stop loss price")
+    potential_return_pct: Optional[float] = Field(default=None, description="Potential return percentage (%)")
+    expected_move_low_pct: Optional[float] = Field(default=None, description="Expected minimum move % for timeframe")
+    expected_move_high_pct: Optional[float] = Field(default=None, description="Expected maximum move % for timeframe")
+    expected_price_range_low: Optional[float] = Field(default=None, description="Expected lower boundary of price range")
+    expected_price_range_high: Optional[float] = Field(default=None, description="Expected upper boundary of price range")
+    risk_pct: Optional[float] = Field(default=None, description="Risk percentage to stop loss (%)")
+    risk_reward_ratio: Optional[float] = Field(default=None, description="Risk to Reward Ratio (e.g. 2.7 for 1:2.7)")
+    risk_level: str = Field(..., description="Risk level: Low, Medium, High, or Very High")
+    confidence: float = Field(..., description="Signal confidence score (%) capped < 100%")
+    holding_time: str = Field(..., description="Estimated holding duration (e.g. 30–90 minutes, 1–3 days)")
+    timeframe: str = Field(..., description="Selected timeframe option (1D, 1W, 1M, 3M, 6M, 1Y, MAX)")
+    reasons: List[str] = Field(default_factory=list, description="Deterministic reasons supporting the trade signal")
+    lifecycle_status: str = Field(..., description="ENTRY_VALID, TRADE_ACTIVE, TARGET_REACHED, MISSED_ENTRY, EXIT_SUGGESTED, TRADE_CLOSED")
+    status_note: Optional[str] = Field(default=None, description="Detailed status note (e.g. Target Achieved, Entry Missed)")
+    reentry_zone_low: Optional[float] = Field(default=None, description="Lower boundary of suggested Re-entry Zone for SELL signals")
+    reentry_zone_high: Optional[float] = Field(default=None, description="Upper boundary of suggested Re-entry Zone for SELL signals")
+    reentry_target_price: Optional[float] = Field(default=None, description="Re-entry Target price for SELL signals")
+    reentry_stop_loss: Optional[float] = Field(default=None, description="Re-entry Stop loss for SELL signals")
+    reentry_return_pct: Optional[float] = Field(default=None, description="Re-entry Potential return % for SELL signals")
+    expected_volatility: Optional[str] = Field(default=None, description="Expected volatility level: High, Medium-High, Medium, Low")
+    strategy_label: Optional[str] = Field(default=None, description="Timeframe strategy description (Scalping, Intraday, Swing, Position, Long-term)")
+    primary_indicators: Optional[List[str]] = Field(default_factory=list, description="Primary technical indicators emphasized for timeframe")
+    position_status: Optional[str] = Field(default="NO_POSITION", description="NO_POSITION, HOLDING_LONG, or HOLDING_SHORT")
+    position_action: Optional[str] = Field(default=None, description="BUY NOW, WAIT, AVOID, SELL NOW, HOLD, or PARTIAL SELL")
+    trailing_stop_price: Optional[float] = Field(default=None, description="Suggested trailing stop price for position holders")
+    next_resistance_target: Optional[float] = Field(default=None, description="Next resistance target price for position holders")
+    profit_protection_level: Optional[float] = Field(default=None, description="Profit protection level for position holders")
+    remaining_upside_pct: Optional[float] = Field(default=None, description="Remaining upside potential percentage (%)")
+    downside_risk_pct: Optional[float] = Field(default=None, description="Downside risk percentage to trailing stop (%)")
+    rally_probability: Optional[float] = Field(default=None, description="Probability score of further rally (%)")

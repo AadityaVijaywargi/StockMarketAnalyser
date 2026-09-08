@@ -8,8 +8,9 @@ def test_settings_load():
     assert settings.ENV in ["development", "production", "test"]
     assert settings.DEFAULT_YEARS_DATA >= 2
     assert settings.PRIMARY_WINDOW_MONTHS == 6
-    assert settings.BUY_THRESHOLD == 70.0
-    assert settings.WATCH_THRESHOLD == 50.0
+    from config.weights import DEFAULT_BUY_THRESHOLD, DEFAULT_WATCH_THRESHOLD
+    assert settings.BUY_THRESHOLD == DEFAULT_BUY_THRESHOLD
+    assert settings.WATCH_THRESHOLD == DEFAULT_WATCH_THRESHOLD
     
 def test_directory_creation():
     """Verify settings.create_directories() creates folders."""

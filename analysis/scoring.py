@@ -419,7 +419,10 @@ class RuleBasedScorer(BaseScorer):
         # Conflicting signals penalty
         conflict_penalty = 20.0 if (bullish_signals >= 2 and bearish_signals >= 2) else 0.0
         
-        confidence_score = round(min(max(agreement_factor + 30.0 - vix_discount - conflict_penalty, 10.0), 100.0), 2)
+        # Confidence Score: 50 - 95 range reflecting signal consensus & trend consistency (100% eliminated)
+        base_conf = 55.0 + (agreement_factor * 0.30)
+        r2_bonus = (r2_20d * 8.0) if slope_20d > 0 else 0.0
+        confidence_score = round(min(max(base_conf + r2_bonus - vix_discount - conflict_penalty, 50.0), 95.0), 2)
 
         # -------------------------------------------------------------
         # LAYER 5: RISK ADJUSTMENTS (Combine to Overall Technical Score)
@@ -463,14 +466,10 @@ class RuleBasedScorer(BaseScorer):
         adjusted_score = round(min(max(overall_score - risk_penalty, 0.0), 100.0), 2)
 
         # -------------------------------------------------------------
-        # LAYER 6: DECISION ENGINE (Separated from scoring)
+        # LAYER 6: DECISION ENGINE (Probability-Driven Single Source Alignment)
         # -------------------------------------------------------------
-        if adjusted_score >= self.buy_threshold and confidence_score >= 50.0:
-            recommendation = "BUY"
-        elif adjusted_score >= self.watch_threshold:
-            recommendation = "WATCH"
-        else:
-            recommendation = "AVOID"
+        from analysis.models.prediction import get_recommendation_from_probability
+        recommendation = get_recommendation_from_probability(adjusted_score)
 
         # -------------------------------------------------------------
         # LAYER 7: FEATURE IMPORTANCE & EXPLAINABILITY METADATA
@@ -481,7 +480,7 @@ class RuleBasedScorer(BaseScorer):
             neg_factors.append(f"Primary downtrend channel active (Trend: {trend_score:.0f}/100)")
             
         if momentum_score > 60.0:
-            pos_factors.append(f"Bullish momentum momentum acceleration (Score: {momentum_score:.0f}/100)")
+            pos_factors.append(f"Bullish momentum acceleration (Score: {momentum_score:.0f}/100)")
         elif momentum_score < 40.0:
             neg_factors.append(f"Momentum deceleration (Score: {momentum_score:.0f}/100)")
 
@@ -508,12 +507,21 @@ class RuleBasedScorer(BaseScorer):
             recommendation=recommendation
         )
 
-        # Risk level classification
+        # Multi-factor Risk Calibration (Volatility, Drawdown, Trend, Support, Patterns, VIX)
         atr_percent = (float(features_df[atr_col[0]].iloc[-1]) / close) * 100.0 if atr_col else 2.0
-        risk_val = (atr_percent * 8.0) + (hv * 0.7) + (vix_val * 0.7) - min(vol_ratio * 2.0, 10.0)
-        if risk_val < 30.0:
+        hv_val = hv if hist_vol_col else 20.0
+        
+        vola_component = min((atr_percent / 4.0 * 25.0) + (hv_val / 50.0 * 25.0), 45.0)
+        trend_component = max((50.0 - trend_score) * 0.4, 0.0)
+        support_component = 15.0 if support_score < 40.0 else (5.0 if support_score < 60.0 else 0.0)
+        pattern_component = 15.0 if any(p.pattern_direction == "BEARISH" for p in detected_patterns) else 0.0
+        market_component = 15.0 if vix_regime in ["Extreme", "Elevated"] else 0.0
+        
+        risk_val = min(max(vola_component + trend_component + support_component + pattern_component + market_component, 0.0), 100.0)
+        
+        if risk_val < 35.0:
             risk_level = "Low"
-        elif risk_val < 50.0:
+        elif risk_val < 55.0:
             risk_level = "Moderate"
         elif risk_val < 75.0:
             risk_level = "High"
@@ -523,7 +531,7 @@ class RuleBasedScorer(BaseScorer):
         risk_profile = RiskProfile(
             level=risk_level,
             atr_percentage=round(atr_percent, 2) if atr_col else 2.0,
-            annualized_volatility=round(hv, 2) if hist_vol_col else 20.0,
+            annualized_volatility=round(hv_val, 2),
             vix_regime=vix_regime,
             liquidity_score=round(min(vol_ratio * 40.0, 100.0), 2)
         )

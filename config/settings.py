@@ -2,7 +2,7 @@ import os
 from typing import Dict, List, Any
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from config.weights import DEFAULT_SCORE_WEIGHTS, DEFAULT_BUY_THRESHOLD, DEFAULT_WATCH_THRESHOLD, INDICATOR_SETTINGS
+from config.weights import DEFAULT_SCORE_WEIGHTS, DEFAULT_BUY_THRESHOLD, DEFAULT_WATCH_THRESHOLD, INDICATOR_SETTINGS, PREDICTION_HORIZON_WEIGHTS, EVENT_OVERRIDE_IMPORTANCE_THRESHOLD
 from config.constants import SUPPORTED_TIMEFRAMES, MARKET_TIMEZONE
 
 class Settings(BaseSettings):
@@ -59,6 +59,8 @@ class Settings(BaseSettings):
     SCORE_WEIGHTS: Dict[str, float] = Field(default_factory=lambda: DEFAULT_SCORE_WEIGHTS)
     BUY_THRESHOLD: float = Field(default=DEFAULT_BUY_THRESHOLD)
     WATCH_THRESHOLD: float = Field(default=DEFAULT_WATCH_THRESHOLD)
+    PREDICTION_HORIZON_WEIGHTS: Dict[str, Dict[str, float]] = Field(default_factory=lambda: PREDICTION_HORIZON_WEIGHTS)
+    EVENT_OVERRIDE_IMPORTANCE_THRESHOLD: float = Field(default=EVENT_OVERRIDE_IMPORTANCE_THRESHOLD)
 
     # API Server Settings
     API_HOST: str = Field(default="127.0.0.1")

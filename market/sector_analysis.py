@@ -18,6 +18,9 @@ def calculate_beta_correlation(stock_df: pd.DataFrame, nifty_df: pd.DataFrame) -
     stock_returns = stock_df["Close"].pct_change().dropna()
     nifty_returns = nifty_df["Close"].pct_change().dropna()
     
+    stock_returns = stock_returns[~stock_returns.index.duplicated(keep="last")]
+    nifty_returns = nifty_returns[~nifty_returns.index.duplicated(keep="last")]
+
     combined = pd.concat([stock_returns, nifty_returns], axis=1, join="inner").dropna()
     if len(combined) < 10:
         return 1.0, 1.0
@@ -55,13 +58,18 @@ def calculate_relative_strength(stock_df: pd.DataFrame, nifty_df: pd.DataFrame) 
         aligned_nifty = stock_df.index.map(lambda dt: nifty_daily.get(dt.date()))
         aligned_nifty_series = pd.Series(aligned_nifty, index=stock_df.index).ffill().bfill()
         
+        stock_close = stock_df["Close"][~stock_df.index.duplicated(keep="last")]
+        aligned_nifty_series = aligned_nifty_series[~aligned_nifty_series.index.duplicated(keep="last")]
+
         combined = pd.DataFrame({
-            "Stock": stock_df["Close"],
+            "Stock": stock_close,
             "Nifty": aligned_nifty_series
         }).dropna()
     else:
         # Fallback to direct concat for non-datetime indexes (mock tests)
-        combined = pd.concat([stock_df["Close"], nifty_df["Close"]], axis=1, join="inner").dropna()
+        s_close = stock_df["Close"][~stock_df.index.duplicated(keep="last")]
+        n_close = nifty_df["Close"][~nifty_df.index.duplicated(keep="last")]
+        combined = pd.concat([s_close, n_close], axis=1, join="inner").dropna()
         combined.columns = ["Stock", "Nifty"]
     
     rs_line = combined["Stock"] / combined["Nifty"]
@@ -106,7 +114,9 @@ def analyze_sector_performance(
     trend_analysis = analyze_horizon_trend(slice_df, "6M")
     
     # Relative strength of sector index vs Nifty
-    combined = pd.concat([sector_df["Close"], nifty_df["Close"]], axis=1, join="inner").dropna()
+    sec_close = sector_df["Close"][~sector_df.index.duplicated(keep="last")]
+    nifty_close = nifty_df["Close"][~nifty_df.index.duplicated(keep="last")]
+    combined = pd.concat([sec_close, nifty_close], axis=1, join="inner").dropna()
     current_rs = float(combined.iloc[-1, 0] / combined.iloc[-1, 1]) if len(combined) > 0 else 1.0
     
     return {

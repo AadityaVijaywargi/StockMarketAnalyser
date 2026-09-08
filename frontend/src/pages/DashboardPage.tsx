@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { DeterministicAnalysisReport, LiveQuote } from '../types';
+import { DeterministicAnalysisReport, LiveQuote, PredictionHorizon, PredictionResult } from '../types';
 import { DashboardHeader } from '../components/DashboardHeader';
 import { TopNavbar } from '../components/TopNavbar';
 import { TechnicalScoresPanel } from '../components/TechnicalScoresPanel';
@@ -8,7 +8,12 @@ import { PatternsPanel } from '../components/PatternsPanel';
 import { SupportResistancePanel } from '../components/SupportResistancePanel';
 import { TechnicalChart } from '../components/TechnicalChart';
 import { AIResearchPanel } from '../components/AIResearchPanel';
+import { TradeSignalPanel } from '../components/TradeSignalPanel';
+import { ActiveTradePanel } from '../components/ActiveTradePanel';
+import { TradePerformanceDashboard } from '../components/TradePerformanceDashboard';
+import { PredictionPanel } from '../components/PredictionPanel';
 import { apiService } from '../services/api';
+import { useNotifications } from '../context/NotificationContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSearchParams } from 'react-router-dom';
 
@@ -31,11 +36,22 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 }) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTimeframe = searchParams.get('timeframe') || '1d';
+  const { checkAndNotify } = useNotifications();
 
   const [localReport, setLocalReport] = useState<DeterministicAnalysisReport | null>(report);
   const [latestQuote, setLatestQuote] = useState<LiveQuote | null>(null);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const [aiReport, setAiReport] = useState<DeterministicAnalysisReport | null>(null);
+  const [predictionHorizon, setPredictionHorizon] = useState<PredictionHorizon>('1d');
+  const [prediction, setPrediction] = useState<PredictionResult | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    apiService.getPrediction(report.ticker, predictionHorizon).then(data => {
+      if (isMounted) setPrediction(data);
+    }).catch(error => console.error('Failed to fetch prediction', error));
+    return () => { isMounted = false; };
+  }, [report.ticker, predictionHorizon]);
 
   // 1. Reset local state when report prop changes (new ticker searched or timeframe reloaded)
   useEffect(() => {
@@ -43,6 +59,11 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     setAiReport(report);
     setLatestQuote(null);
     setLastUpdated(new Date().toLocaleTimeString());
+    
+    // Check if watched stock recommendation changed
+    if (report) {
+      checkAndNotify(report);
+    }
   }, [report]);
 
   // 2. Update AI report state with stability checks
@@ -56,7 +77,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     // Stability thresholds check
     const recommendationChanged = aiReport.scores.recommendation !== localReport.scores.recommendation;
     const scoreMovedSignificantly = Math.abs(aiReport.scores.overall_score - localReport.scores.overall_score) > 5.0;
-    const confidenceMovedSignificantly = Math.abs(aiReport.scores.confidence - localReport.scores.confidence) > 5.0;
+    const confidenceMovedSignificantly = Math.abs((aiReport.scores?.confidence ?? 50.0) - (localReport.scores?.confidence ?? 50.0)) > 5.0;
     const patternCountChanged = aiReport.patterns.length !== localReport.patterns.length;
     const regimeChanged = aiReport.market_context.vix.regime !== localReport.market_context.vix.regime;
 
@@ -75,6 +96,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   useEffect(() => {
     let isMounted = true;
     let pollIntervalId: any = null;
+    let isRefreshingRecommendation = false;
 
     const pollQuote = async () => {
       if (document.hidden) return;
@@ -111,6 +133,19 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
               }
             };
           });
+
+          if (quote.is_market_open && !isRefreshingRecommendation) {
+            isRefreshingRecommendation = true;
+            try {
+              const refreshedRecommendation = await apiService.refreshRecommendation(report.ticker);
+              if (isMounted) {
+                setLocalReport(prev => prev ? { ...prev, ...refreshedRecommendation } : prev);
+                checkAndNotify({ ...report, ...refreshedRecommendation });
+              }
+            } finally {
+              isRefreshingRecommendation = false;
+            }
+          }
         }
       } catch (e) {
         console.error("Quote polling loop failed", e);
@@ -218,8 +253,37 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           <AIResearchPanel report={aiReport || activeReport} />
         </div>
 
+        <PredictionPanel prediction={prediction} horizon={predictionHorizon} onHorizonChange={setPredictionHorizon} />
+
         <div className="w-full">
-          <TechnicalChart chartData={activeReport.chart_data} />
+          <TradeSignalPanel 
+            initialSignal={activeReport.trade_signal} 
+            prediction={prediction || activeReport.prediction}
+            ticker={activeReport.ticker} 
+            activeTimeframe={activeTimeframe}
+            onTimeframeChange={handleTimeframeChange}
+            companyName={activeReport.company_name}
+          />
+        </div>
+
+        <div className="w-full">
+          <ActiveTradePanel 
+            ticker={activeReport.ticker} 
+            latestPrice={latestQuote?.price || (activeReport.chart_data.close[activeReport.chart_data.close.length - 1])} 
+          />
+        </div>
+
+        <div className="w-full">
+          <TradePerformanceDashboard />
+        </div>
+
+        <div className="w-full">
+          <TechnicalChart 
+            chartData={activeReport.chart_data} 
+            ticker={activeReport.ticker} 
+            activeTimeframe={activeTimeframe}
+            onTimeframeChange={handleTimeframeChange}
+          />
         </div>
 
         <div className="w-full">

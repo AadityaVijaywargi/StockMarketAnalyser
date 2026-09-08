@@ -1,54 +1,386 @@
 [
-  {"ticker": "RELIANCE.NS", "name": "Reliance Industries Limited", "exchange": "NSE"},
-  {"ticker": "TCS.NS", "name": "Tata Consultancy Services Limited", "exchange": "NSE"},
-  {"ticker": "INFY.NS", "name": "Infosys Limited", "exchange": "NSE"},
-  {"ticker": "HDFCBANK.NS", "name": "HDFC Bank Limited", "exchange": "NSE"},
-  {"ticker": "ICICIBANK.NS", "name": "ICICI Bank Limited", "exchange": "NSE"},
-  {"ticker": "SBIN.NS", "name": "State Bank of India", "exchange": "NSE"},
-  {"ticker": "BHARTIARTL.NS", "name": "Bharti Airtel Limited", "exchange": "NSE"},
-  {"ticker": "LT.NS", "name": "Larsen & Toubro Limited", "exchange": "NSE"},
-  {"ticker": "TMCV.NS", "name": "Tata Motors Limited (TMCV)", "exchange": "NSE"},
-  {"ticker": "TATASTEEL.NS", "name": "Tata Steel Limited", "exchange": "NSE"},
-  {"ticker": "TATAPOWER.NS", "name": "Tata Power Company Limited", "exchange": "NSE"},
-  {"ticker": "TITAN.NS", "name": "Titan Company Limited", "exchange": "NSE"},
-  {"ticker": "TECHM.NS", "name": "Tech Mahindra Limited", "exchange": "NSE"},
-  {"ticker": "RVNL.NS", "name": "Rail Vikas Nigam Limited", "exchange": "NSE"},
-  {"ticker": "RBLBANK.NS", "name": "RBL Bank Limited", "exchange": "NSE"},
-  {"ticker": "RAIN.NS", "name": "Rain Industries Limited", "exchange": "NSE"},
-  {"ticker": "RAMCOCEM.NS", "name": "The Ramco Cements Limited", "exchange": "NSE"},
-  {"ticker": "RECLTD.NS", "name": "REC Limited", "exchange": "NSE"},
-  {"ticker": "INOXWIND.NS", "name": "Inox Wind Limited", "exchange": "NSE"},
-  {"ticker": "INDIGO.NS", "name": "InterGlobe Aviation Limited (IndiGo)", "exchange": "NSE"},
-  {"ticker": "INDUSTOWER.NS", "name": "Indus Towers Limited", "exchange": "NSE"},
-  {"ticker": "WIPRO.NS", "name": "Wipro Limited", "exchange": "NSE"},
-  {"ticker": "ITC.NS", "name": "ITC Limited", "exchange": "NSE"},
-  {"ticker": "HINDUNILVR.NS", "name": "Hindustan Unilever Limited", "exchange": "NSE"},
-  {"ticker": "AXISBANK.NS", "name": "Axis Bank Limited", "exchange": "NSE"},
-  {"ticker": "KOTAKBANK.NS", "name": "Kotak Mahindra Bank Limited", "exchange": "NSE"},
-  {"ticker": "ADANIENT.NS", "name": "Adani Enterprises Limited", "exchange": "NSE"},
-  {"ticker": "ADANIPORTS.NS", "name": "Adani Ports and Special Economic Zone Limited", "exchange": "NSE"},
-  {"ticker": "ASIANPAINT.NS", "name": "Asian Paints Limited", "exchange": "NSE"},
-  {"ticker": "BAJFINANCE.NS", "name": "Bajaj Finance Limited", "exchange": "NSE"},
-  {"ticker": "BAJAJFINSV.NS", "name": "Bajaj Finserv Limited", "exchange": "NSE"},
-  {"ticker": "SUNPHARMA.NS", "name": "Sun Pharmaceutical Industries Limited", "exchange": "NSE"},
-  {"ticker": "MARUTI.NS", "name": "Maruti Suzuki India Limited", "exchange": "NSE"},
-  {"ticker": "NTPC.NS", "name": "NTPC Limited", "exchange": "NSE"},
-  {"ticker": "ONGC.NS", "name": "Oil and Natural Gas Corporation Limited", "exchange": "NSE"},
-  {"ticker": "POWERGRID.NS", "name": "Power Grid Corporation of India Limited", "exchange": "NSE"},
-  {"ticker": "JSWSTEEL.NS", "name": "JSW Steel Limited", "exchange": "NSE"},
-  {"ticker": "M&M.NS", "name": "Mahindra & Mahindra Limited", "exchange": "NSE"},
-  {"ticker": "COALINDIA.NS", "name": "Coal India Limited", "exchange": "NSE"},
-  {"ticker": "LTIM.NS", "name": "LTIMindtree Limited", "exchange": "NSE"},
-  {"ticker": "ULTRACEMCO.NS", "name": "UltraTech Cement Limited", "exchange": "NSE"},
-  {"ticker": "GRASIM.NS", "name": "Grasim Industries Limited", "exchange": "NSE"},
-  {"ticker": "JIOFIN.NS", "name": "Jio Financial Services Limited", "exchange": "NSE"},
-  {"ticker": "HAL.NS", "name": "Hindustan Aeronautics Limited", "exchange": "NSE"},
-  {"ticker": "HINDALCO.NS", "name": "Hindalco Industries Limited", "exchange": "NSE"},
-  {"ticker": "BPCL.NS", "name": "Bharat Petroleum Corporation Limited", "exchange": "NSE"},
-  {"ticker": "ADANIPOWER.NS", "name": "Adani Power Limited", "exchange": "NSE"},
-  {"ticker": "IOC.NS", "name": "Indian Oil Corporation Limited", "exchange": "NSE"},
-  {"ticker": "BEL.NS", "name": "Bharat Electronics Limited", "exchange": "NSE"},
-  {"ticker": "IRFC.NS", "name": "Indian Railway Finance Corporation Limited", "exchange": "NSE"},
-  {"ticker": "PNB.NS", "name": "Punjab National Bank", "exchange": "NSE"},
-  {"ticker": "DLF.NS", "name": "DLF Limited", "exchange": "NSE"}
+  {
+    "ticker": "RELIANCE.NS",
+    "name": "Reliance Industries Limited",
+    "exchange": "NSE",
+    "sector": "Energy & Petrochemicals",
+    "industry": "Oil & Gas Refining",
+    "aliases": ["RELIANCE", "RIL", "Reliance Industries", "Relience", "Relince"]
+  },
+  {
+    "ticker": "TCS.NS",
+    "name": "Tata Consultancy Services Limited",
+    "exchange": "NSE",
+    "sector": "Information Technology",
+    "industry": "IT Services & Consulting",
+    "aliases": ["TCS", "Tata Consultancy", "Tata Cons", "Tata Serv", "Tata Consultancy Services"]
+  },
+  {
+    "ticker": "INFY.NS",
+    "name": "Infosys Limited",
+    "exchange": "NSE",
+    "sector": "Information Technology",
+    "industry": "IT Services & Consulting",
+    "aliases": ["INFY", "Infosys", "Infosis", "Infy Ltd"]
+  },
+  {
+    "ticker": "HDFCBANK.NS",
+    "name": "HDFC Bank Limited",
+    "exchange": "NSE",
+    "sector": "Banking & Financials",
+    "industry": "Private Sector Bank",
+    "aliases": ["HDFC", "HDFC Bank", "HDFCBANK", "HDFCBK", "HDFC Banking"]
+  },
+  {
+    "ticker": "ICICIBANK.NS",
+    "name": "ICICI Bank Limited",
+    "exchange": "NSE",
+    "sector": "Banking & Financials",
+    "industry": "Private Sector Bank",
+    "aliases": ["ICICI", "ICICI Bank", "ICICIBANK", "ICICIBK"]
+  },
+  {
+    "ticker": "SBIN.NS",
+    "name": "State Bank of India",
+    "exchange": "NSE",
+    "sector": "Banking & Financials",
+    "industry": "Public Sector Bank",
+    "aliases": ["SBI", "SBIN", "State Bank", "State Bank of India"]
+  },
+  {
+    "ticker": "BHARTIARTL.NS",
+    "name": "Bharti Airtel Limited",
+    "exchange": "NSE",
+    "sector": "Telecommunications",
+    "industry": "Telecom Services",
+    "aliases": ["Airtel", "Bharti Airtel", "BHARTIARTL"]
+  },
+  {
+    "ticker": "LT.NS",
+    "name": "Larsen & Toubro Limited",
+    "exchange": "NSE",
+    "sector": "Capital Goods & Infrastructure",
+    "industry": "Engineering & Construction",
+    "aliases": ["LT", "L&T", "Larsen", "Larsen & Toubro", "Larsen and Toubro"]
+  },
+  {
+    "ticker": "TATAMOTORS.NS",
+    "name": "Tata Motors Limited",
+    "exchange": "NSE",
+    "sector": "Automobile",
+    "industry": "Commercial & Passenger Vehicles",
+    "aliases": ["Tata Motors", "TMCV", "Tata Motor", "Tata Auto"]
+  },
+  {
+    "ticker": "TATASTEEL.NS",
+    "name": "Tata Steel Limited",
+    "exchange": "NSE",
+    "sector": "Metals & Mining",
+    "industry": "Steel Manufacturing",
+    "aliases": ["Tata Steel", "TATASTEEL", "Tata Steel Ltd"]
+  },
+  {
+    "ticker": "TATAPOWER.NS",
+    "name": "Tata Power Company Limited",
+    "exchange": "NSE",
+    "sector": "Utilities & Power",
+    "industry": "Power Generation",
+    "aliases": ["Tata Power", "TATAPOWER", "Tata Power Ltd"]
+  },
+  {
+    "ticker": "TITAN.NS",
+    "name": "Titan Company Limited",
+    "exchange": "NSE",
+    "sector": "Consumer Durables",
+    "industry": "Jewelry & Watches",
+    "aliases": ["Titan", "TITAN", "Tata Titan", "Titan Company"]
+  },
+  {
+    "ticker": "TECHM.NS",
+    "name": "Tech Mahindra Limited",
+    "exchange": "NSE",
+    "sector": "Information Technology",
+    "industry": "IT Services",
+    "aliases": ["Tech Mahindra", "TECHM", "TechM"]
+  },
+  {
+    "ticker": "WIPRO.NS",
+    "name": "Wipro Limited",
+    "exchange": "NSE",
+    "sector": "Information Technology",
+    "industry": "IT Services",
+    "aliases": ["Wipro", "WIPRO"]
+  },
+  {
+    "ticker": "ITC.NS",
+    "name": "ITC Limited",
+    "exchange": "NSE",
+    "sector": "Consumer Goods",
+    "industry": "FMCG & Cigarettes",
+    "aliases": ["ITC", "ITC Ltd"]
+  },
+  {
+    "ticker": "HINDUNILVR.NS",
+    "name": "Hindustan Unilever Limited",
+    "exchange": "NSE",
+    "sector": "Consumer Goods",
+    "industry": "FMCG Personal Care",
+    "aliases": ["HUL", "Hindustan Unilever", "HINDUNILVR"]
+  },
+  {
+    "ticker": "AXISBANK.NS",
+    "name": "Axis Bank Limited",
+    "exchange": "NSE",
+    "sector": "Banking & Financials",
+    "industry": "Private Sector Bank",
+    "aliases": ["Axis", "Axis Bank", "AXISBANK"]
+  },
+  {
+    "ticker": "KOTAKBANK.NS",
+    "name": "Kotak Mahindra Bank Limited",
+    "exchange": "NSE",
+    "sector": "Banking & Financials",
+    "industry": "Private Sector Bank",
+    "aliases": ["Kotak", "Kotak Bank", "Kotak Mahindra", "KOTAKBANK"]
+  },
+  {
+    "ticker": "ADANIENT.NS",
+    "name": "Adani Enterprises Limited",
+    "exchange": "NSE",
+    "sector": "Diversified Conglomerate",
+    "industry": "Trading & Mining",
+    "aliases": ["Adani", "Adani Enterprises", "ADANIENT"]
+  },
+  {
+    "ticker": "ADANIPORTS.NS",
+    "name": "Adani Ports and Special Economic Zone Limited",
+    "exchange": "NSE",
+    "sector": "Infrastructure & Logistics",
+    "industry": "Ports & Marine Services",
+    "aliases": ["Adani Ports", "ADANIPORTS"]
+  },
+  {
+    "ticker": "ADANIPOWER.NS",
+    "name": "Adani Power Limited",
+    "exchange": "NSE",
+    "sector": "Utilities & Power",
+    "industry": "Thermal Power Generation",
+    "aliases": ["Adani Power", "ADANIPOWER"]
+  },
+  {
+    "ticker": "ASIANPAINT.NS",
+    "name": "Asian Paints Limited",
+    "exchange": "NSE",
+    "sector": "Consumer Durables",
+    "industry": "Paints & Decor",
+    "aliases": ["Asian Paints", "ASIANPAINT", "Asian Paint"]
+  },
+  {
+    "ticker": "BAJFINANCE.NS",
+    "name": "Bajaj Finance Limited",
+    "exchange": "NSE",
+    "sector": "Banking & Financials",
+    "industry": "NBFC",
+    "aliases": ["Bajaj Finance", "BAJFINANCE"]
+  },
+  {
+    "ticker": "BAJAJFINSV.NS",
+    "name": "Bajaj Finserv Limited",
+    "exchange": "NSE",
+    "sector": "Banking & Financials",
+    "industry": "Financial Holdings",
+    "aliases": ["Bajaj Finserv", "BAJAJFINSV"]
+  },
+  {
+    "ticker": "SUNPHARMA.NS",
+    "name": "Sun Pharmaceutical Industries Limited",
+    "exchange": "NSE",
+    "sector": "Pharmaceuticals",
+    "industry": "Generics & Formulations",
+    "aliases": ["Sun Pharma", "Sun Pharmaceuticals", "SUNPHARMA"]
+  },
+  {
+    "ticker": "MARUTI.NS",
+    "name": "Maruti Suzuki India Limited",
+    "exchange": "NSE",
+    "sector": "Automobile",
+    "industry": "Passenger Vehicles",
+    "aliases": ["Maruti", "Maruti Suzuki", "MARUTI"]
+  },
+  {
+    "ticker": "NTPC.NS",
+    "name": "NTPC Limited",
+    "exchange": "NSE",
+    "sector": "Utilities & Power",
+    "industry": "Power Generation",
+    "aliases": ["NTPC", "NTPC Ltd", "National Thermal Power"]
+  },
+  {
+    "ticker": "ONGC.NS",
+    "name": "Oil and Natural Gas Corporation Limited",
+    "exchange": "NSE",
+    "sector": "Energy",
+    "industry": "Oil Exploration & Production",
+    "aliases": ["ONGC", "Oil and Natural Gas"]
+  },
+  {
+    "ticker": "POWERGRID.NS",
+    "name": "Power Grid Corporation of India Limited",
+    "exchange": "NSE",
+    "sector": "Utilities & Power",
+    "industry": "Power Transmission",
+    "aliases": ["Power Grid", "POWERGRID", "Powergrid Corp"]
+  },
+  {
+    "ticker": "JSWSTEEL.NS",
+    "name": "JSW Steel Limited",
+    "exchange": "NSE",
+    "sector": "Metals & Mining",
+    "industry": "Steel Manufacturing",
+    "aliases": ["JSW Steel", "JSWSTEEL"]
+  },
+  {
+    "ticker": "M&M.NS",
+    "name": "Mahindra & Mahindra Limited",
+    "exchange": "NSE",
+    "sector": "Automobile",
+    "industry": "Commercial & Utility Vehicles",
+    "aliases": ["M&M", "Mahindra", "Mahindra & Mahindra", "Mahindra and Mahindra"]
+  },
+  {
+    "ticker": "COALINDIA.NS",
+    "name": "Coal India Limited",
+    "exchange": "NSE",
+    "sector": "Metals & Mining",
+    "industry": "Coal Mining",
+    "aliases": ["Coal India", "COALINDIA"]
+  },
+  {
+    "ticker": "LTIM.NS",
+    "name": "LTIMindtree Limited",
+    "exchange": "NSE",
+    "sector": "Information Technology",
+    "industry": "IT Services",
+    "aliases": ["LTIM", "LTIMindtree", "Mindtree"]
+  },
+  {
+    "ticker": "ULTRACEMCO.NS",
+    "name": "UltraTech Cement Limited",
+    "exchange": "NSE",
+    "sector": "Construction Materials",
+    "industry": "Cement Manufacturing",
+    "aliases": ["UltraTech", "UltraTech Cement", "ULTRACEMCO"]
+  },
+  {
+    "ticker": "GRASIM.NS",
+    "name": "Grasim Industries Limited",
+    "exchange": "NSE",
+    "sector": "Materials",
+    "industry": "Textiles & Chemicals",
+    "aliases": ["Grasim", "GRASIM"]
+  },
+  {
+    "ticker": "JIOFIN.NS",
+    "name": "Jio Financial Services Limited",
+    "exchange": "NSE",
+    "sector": "Banking & Financials",
+    "industry": "Financial Technology & NBFC",
+    "aliases": ["Jio Financial", "Jio Fin", "JIOFIN"]
+  },
+  {
+    "ticker": "HAL.NS",
+    "name": "Hindustan Aeronautics Limited",
+    "exchange": "NSE",
+    "sector": "Aerospace & Defense",
+    "industry": "Defense Manufacturing",
+    "aliases": ["HAL", "Hindustan Aeronautics"]
+  },
+  {
+    "ticker": "BEL.NS",
+    "name": "Bharat Electronics Limited",
+    "exchange": "NSE",
+    "sector": "Aerospace & Defense",
+    "industry": "Defense Electronics",
+    "aliases": ["BEL", "Bharat Electronics"]
+  },
+  {
+    "ticker": "BPCL.NS",
+    "name": "Bharat Petroleum Corporation Limited",
+    "exchange": "NSE",
+    "sector": "Energy",
+    "industry": "Oil Refining & Marketing",
+    "aliases": ["BPCL", "Bharat Petroleum"]
+  },
+  {
+    "ticker": "IOC.NS",
+    "name": "Indian Oil Corporation Limited",
+    "exchange": "NSE",
+    "sector": "Energy",
+    "industry": "Oil Refining",
+    "aliases": ["IOC", "Indian Oil"]
+  },
+  {
+    "ticker": "IRFC.NS",
+    "name": "Indian Railway Finance Corporation Limited",
+    "exchange": "NSE",
+    "sector": "Financials",
+    "industry": "Railway Infrastructure Finance",
+    "aliases": ["IRFC", "Indian Railway Finance"]
+  },
+  {
+    "ticker": "PNB.NS",
+    "name": "Punjab National Bank",
+    "exchange": "NSE",
+    "sector": "Banking & Financials",
+    "industry": "Public Sector Bank",
+    "aliases": ["PNB", "Punjab National Bank"]
+  },
+  {
+    "ticker": "DLF.NS",
+    "name": "DLF Limited",
+    "exchange": "NSE",
+    "sector": "Real Estate",
+    "industry": "Residential & Commercial Real Estate",
+    "aliases": ["DLF", "DLF Ltd"]
+  },
+  {
+    "ticker": "^NSEI",
+    "name": "NIFTY 50 Benchmark Index",
+    "exchange": "INDEX",
+    "sector": "Benchmark Index",
+    "industry": "Broad Market Index",
+    "aliases": ["Nifty", "Nifty 50", "NSEI", "NSE Index", "Nifty Benchmark"]
+  },
+  {
+    "ticker": "^NSEBANK",
+    "name": "NIFTY Bank Index",
+    "exchange": "INDEX",
+    "sector": "Banking Sector Index",
+    "industry": "Banking Sector Benchmark",
+    "aliases": ["Bank Nifty", "Nifty Bank", "NSEBANK", "Bank Index"]
+  },
+  {
+    "ticker": "^BSESN",
+    "name": "BSE SENSEX Index",
+    "exchange": "INDEX",
+    "sector": "Benchmark Index",
+    "industry": "Broad Market Index",
+    "aliases": ["Sensex", "BSE Sensex", "BSESN", "BSE 30"]
+  },
+  {
+    "ticker": "^CNXIT",
+    "name": "NIFTY IT Sector Index",
+    "exchange": "INDEX",
+    "sector": "IT Sector Index",
+    "industry": "Tech Benchmark",
+    "aliases": ["Nifty IT", "CNXIT", "IT Index"]
+  },
+  {
+    "ticker": "^CNXPHARMA",
+    "name": "NIFTY Pharma Sector Index",
+    "exchange": "INDEX",
+    "sector": "Pharma Sector Index",
+    "industry": "Healthcare Benchmark",
+    "aliases": ["Nifty Pharma", "CNXPHARMA", "Pharma Index"]
+  }
 ]

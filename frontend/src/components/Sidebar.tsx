@@ -35,9 +35,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ onSearchClick }) => {
   const menuItems = [
     { name: 'Dashboard', path: `/dashboard/${lastStock}`, icon: LayoutDashboard },
     { name: 'Analyze Stock', path: '/', icon: Search, action: onSearchClick },
-    { name: 'Market Overview', path: '#', icon: Globe, disabled: true },
-    { name: 'Watchlist', path: '#', icon: Star, disabled: true, tag: 'SOON' },
-    { name: 'Portfolio', path: '#', icon: Briefcase, disabled: true, tag: 'SOON' },
+    { name: 'Watchlist', path: '/watchlist', icon: Star },
+    { name: 'Market Overview', path: '/market', icon: Globe },
+    { name: 'Portfolio', path: '/portfolio', icon: Briefcase },
     { name: 'Backtesting', path: '#', icon: Play, disabled: true, tag: 'SOON' },
     { name: 'Settings', path: '#', icon: Settings, disabled: true },
   ];
@@ -65,8 +65,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ onSearchClick }) => {
         <nav className="p-4 flex flex-col gap-1.5">
           {menuItems.map((item, idx) => {
             const Icon = item.icon;
-            // Match subpaths like /dashboard/TCS to keep Dashboard tab highlighted
-            const isActive = item.path !== '/' && item.path !== '#' && location.pathname.startsWith('/dashboard');
+            // Match subpaths like /dashboard/TCS or /watchlist
+            const isActive = item.name === 'Dashboard' 
+              ? location.pathname.startsWith('/dashboard') 
+              : item.path !== '/' && item.path !== '#' && location.pathname.startsWith(item.path);
             const isHomeActive = item.path === '/' && location.pathname === '/';
             
             if (item.disabled) {

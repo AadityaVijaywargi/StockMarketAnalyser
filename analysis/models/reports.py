@@ -7,7 +7,8 @@ from analysis.models.market import MarketContextModel
 from analysis.models.scores import TechnicalScores
 from analysis.models.chart import ChartDataModel
 from analysis.models.risk import RiskProfile
-from intelligence.schemas import AIResearchReportModel
+from analysis.models.trade_signal import TradeSignalModel
+from intelligence.schemas import AIResearchReportModel, IntelligencePack
 
 class DeterministicAnalysisReport(BaseModel):
     """
@@ -27,7 +28,9 @@ class DeterministicAnalysisReport(BaseModel):
     patterns: List[PatternDetection]
     support_zones: List[SRZone]
     resistance_zones: List[SRZone]
+    trade_signal: Optional[TradeSignalModel] = Field(default=None, description="Real-time Trade Signal")
     ai_research_report: Optional[AIResearchReportModel] = Field(default=None, description="Generated AI Analyst Research Report")
+    intelligence_pack: Optional[IntelligencePack] = Field(default=None, description="Aggregated Market Intelligence Pack")
     metadata: Optional[Dict[str, Any]] = Field(default=None, description="Execution timing and metadata")
 
 

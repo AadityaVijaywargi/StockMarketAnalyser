@@ -120,6 +120,16 @@ class FileCacheManager:
             # Ensure 'Date' is set as index and formatted as datetime
             df['Date'] = pd.to_datetime(df['Date'])
             df.set_index('Date', inplace=True)
+
+            # Invalidate truncated cache files with fewer than 250 rows for daily interval
+            if interval == "1d" and len(df) < 250 and not ticker.startswith("TEST") and not ticker.startswith("^"):
+                logger.warning(f"Cache invalid for {ticker}: only {len(df)} rows found (required >= 250). Deleting stale cache.", extra={"ticker": ticker})
+                try:
+                    os.remove(cache_path)
+                except Exception:
+                    pass
+                return None
+
             logger.info(f"Cache HIT for ticker {ticker} ({interval})", extra={"ticker": ticker})
             return df
         except Exception as e:

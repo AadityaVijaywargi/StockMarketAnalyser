@@ -1,6 +1,7 @@
 import React from 'react';
 import { Bell, Sun } from 'lucide-react';
 import { SearchBar } from './search/SearchBar';
+import { useNotifications } from '../context/NotificationContext';
 
 interface TopNavbarProps {
   onSearch: (ticker: string) => void;
@@ -8,8 +9,10 @@ interface TopNavbarProps {
 }
 
 export const TopNavbar: React.FC<TopNavbarProps> = ({ onSearch, isLoading }) => {
+  const { unreadCount, toggleOpen, isOpen } = useNotifications();
+
   return (
-    <div className="h-16 bg-surface border-b border-borderDark flex items-center justify-between px-6 sticky top-0 z-30">
+    <div className="h-16 bg-surface border-b border-borderDark flex items-center justify-between px-6 sticky top-0 z-30 shrink-0">
       
       {/* Search Input */}
       <SearchBar
@@ -22,10 +25,22 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({ onSearch, isLoading }) => 
 
       {/* Action utilities */}
       <div className="flex items-center gap-4">
-        {/* Notifications */}
-        <button className="relative w-8 h-8 rounded-lg hover:bg-white/[0.03] border border-transparent hover:border-borderDark flex items-center justify-center text-textMuted hover:text-white transition-all">
-          <Bell className="w-4 h-4" />
-          <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-brand rounded-full" />
+        {/* Notifications Button & Badge */}
+        <button
+          onClick={toggleOpen}
+          title="Notification Center"
+          className={`relative w-9 h-9 rounded-lg border transition-all focus:outline-none cursor-pointer ${
+            isOpen
+              ? 'bg-brand/20 border-brand/40 text-brand'
+              : 'hover:bg-white/[0.05] border-transparent hover:border-borderDark text-textMuted hover:text-white'
+          }`}
+        >
+          <Bell className="w-4.5 h-4.5" />
+          {unreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 bg-brand text-white font-mono font-bold text-[10px] px-1.5 py-0.2 rounded-full shadow-lg shadow-brand/40 min-w-[18px] text-center border border-background">
+              {unreadCount > 99 ? '99+' : unreadCount}
+            </span>
+          )}
         </button>
 
         {/* Theme Toggle (dark mode locked) */}

@@ -45,3 +45,10 @@ class BaseScorer(ABC):
         Returns a dictionary of scores (Trend, Momentum, Volume, etc.) and overall rating.
         """
         pass
+
+
+class BasePredictionEngine(ABC):
+    """Stable prediction contract for deterministic and future ML implementations."""
+    @abstractmethod
+    def predict(self, ticker: str, horizon: str, features_df: pd.DataFrame, scores: Any, risk: Any, market_context: Dict[str, Any], intelligence_pack: Any) -> Any:
+        pass

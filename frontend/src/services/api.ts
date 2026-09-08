@@ -1,7 +1,12 @@
 import axios from 'axios';
-import { DeterministicAnalysisReport, LiveQuote, TopOpportunitiesResponse } from '../types';
+import { DeterministicAnalysisReport, LiveQuote, PredictionHorizon, PredictionResult, TopOpportunitiesResponse, TradeSignal } from '../types';
 
-const API_BASE_URL = 'http://localhost:8000';
+export type RecommendationRefresh = Pick<
+  DeterministicAnalysisReport,
+  'scores' | 'risk_profile' | 'positive_factors' | 'negative_factors' | 'neutral_factors'
+>;
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8001';
 
 const client = axios.create({
   baseURL: API_BASE_URL,
@@ -22,9 +27,9 @@ export const apiService = {
   /**
    * Runs complete quantitative analysis on a single stock ticker.
    */
-  async analyzeTicker(ticker: string, timeframe: string = '1d', signal?: AbortSignal, debug: boolean = true): Promise<DeterministicAnalysisReport> {
+  async analyzeTicker(ticker: string, timeframe: string = '1d', signal?: AbortSignal, debug: boolean = true, forceRefresh: boolean = false): Promise<DeterministicAnalysisReport> {
     const response = await client.get<DeterministicAnalysisReport>(`/analyze/${ticker}`, {
-      params: { timeframe, debug },
+      params: { timeframe, debug, force_refresh: forceRefresh },
       signal,
     });
     return response.data;
@@ -35,6 +40,31 @@ export const apiService = {
    */
   async getLiveQuote(ticker: string): Promise<LiveQuote> {
     const response = await client.get<LiveQuote>(`/analyze/${ticker}/quote`);
+    return response.data;
+  },
+
+  /**
+   * Recalculates score outputs from the latest live quote without rebuilding the full report.
+   */
+  async refreshRecommendation(ticker: string): Promise<RecommendationRefresh> {
+    const response = await client.get<RecommendationRefresh>(`/analyze/${ticker}/recommendation`);
+    return response.data;
+  },
+
+  async getPrediction(ticker: string, horizon: PredictionHorizon): Promise<PredictionResult> {
+    const response = await client.get<PredictionResult>(`/analyze/${ticker}/prediction`, { params: { horizon } });
+    return response.data;
+  },
+
+  /**
+   * Fetches batch predictions for monitored watchlist items using single-pass benchmark caching.
+   */
+  async getWatchlistPredictions(tickers: string[], horizon: string = '1d'): Promise<Record<string, any>> {
+    if (!tickers || tickers.length === 0) return {};
+    const response = await client.post<Record<string, any>>('/analyze/watchlist-predictions', {
+      tickers,
+      horizon
+    });
     return response.data;
   },
 
@@ -54,6 +84,64 @@ export const apiService = {
   async getTopOpportunities(limit: number = 12, forceRefresh: boolean = false): Promise<TopOpportunitiesResponse> {
     const response = await client.get<TopOpportunitiesResponse>('/market/top-opportunities', {
       params: { limit, force_refresh: forceRefresh }
+    });
+    return response.data;
+  },
+
+  /**
+   * Generates AI intelligence research report for a stock or analysis payload.
+   */
+  async getIntelligenceReport(ticker: string, timeframe: string = '1d', analysisReport?: DeterministicAnalysisReport): Promise<DeterministicAnalysisReport> {
+    const response = await client.post<DeterministicAnalysisReport>('/intelligence/report', {
+      ticker,
+      timeframe,
+      analysis_report: analysisReport
+    });
+    return response.data;
+  },
+
+  /**
+   * Fetches standalone Market Intelligence Pack for a stock.
+   */
+  async getIntelligenceNews(ticker: string, companyName: string = '', sectorName: string = '') {
+    const response = await client.get(`/intelligence/news/${ticker}`, {
+      params: { company_name: companyName, sector_name: sectorName }
+    });
+    return response.data;
+  },
+
+  /**
+   * Fetches clean historical OHLC chart data for a given stock and timeframe option.
+   */
+  async getHistoricalChart(ticker: string, timeframe: string = '1D'): Promise<any> {
+    const response = await client.get(`/analyze/${ticker}/chart`, { params: { timeframe } });
+    return response.data;
+  },
+
+  /**
+   * Diagnostic mode endpoint returning exchange timezone, market status, and raw candle verification.
+   */
+  async getChartDiagnostics(ticker: string): Promise<any> {
+    const response = await client.get(`/analyze/${ticker}/chart-diagnostics`);
+    return response.data;
+  },
+
+  /**
+   * Fetches recalculated Real-Time Trade Signal for a stock, timeframe option, and position status.
+   */
+  async getTradeSignal(ticker: string, timeframe: string = '1D', positionStatus: string = 'NO_POSITION'): Promise<TradeSignal> {
+    const response = await client.get<TradeSignal>(`/analyze/${ticker}/trade-signal`, {
+      params: { timeframe, position_status: positionStatus }
+    });
+    return response.data;
+  },
+
+  /**
+   * Fetches full Market Intelligence Dashboard payload for Phase 23.
+   */
+  async getMarketOverview(forceRefresh: boolean = false) {
+    const response = await client.get('/market/overview', {
+      params: { force_refresh: forceRefresh }
     });
     return response.data;
   },

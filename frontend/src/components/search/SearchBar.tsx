@@ -15,7 +15,7 @@ interface SearchBarProps {
 export const SearchBar: React.FC<SearchBarProps> = ({
   onSearch,
   isLoading = false,
-  placeholder = "Search ticker or company name (e.g. TCS)...",
+  placeholder = "Search ticker, company or index (e.g. TCS, Tata Motors, Nifty)...",
   className = "",
   compact = false
 }) => {
@@ -26,19 +26,9 @@ export const SearchBar: React.FC<SearchBarProps> = ({
   const [isSearching, setIsSearching] = useState<boolean>(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const debouncedQuery = useDebounce<string>(query, 250);
+  const debouncedQuery = useDebounce<string>(query, 180);
 
-  // Popular stocks database defaults
-  const popularStocks: SearchStock[] = [
-    { ticker: "RELIANCE.NS", name: "Reliance Industries Limited", exchange: "NSE" },
-    { ticker: "TCS.NS", name: "Tata Consultancy Services Limited", exchange: "NSE" },
-    { ticker: "INFY.NS", name: "Infosys Limited", exchange: "NSE" },
-    { ticker: "HDFCBANK.NS", name: "HDFC Bank Limited", exchange: "NSE" },
-    { ticker: "ICICIBANK.NS", name: "ICICI Bank Limited", exchange: "NSE" },
-    { ticker: "SBIN.NS", name: "State Bank of India", exchange: "NSE" },
-    { ticker: "BHARTIARTL.NS", name: "Bharti Airtel Limited", exchange: "NSE" },
-    { ticker: "LT.NS", name: "Larsen & Toubro Limited", exchange: "NSE" }
-  ];
+  const popularStocks: SearchStock[] = SearchService.getPopularStocks();
 
   // 1. Load recent searches on focus/mount
   useEffect(() => {
@@ -52,9 +42,9 @@ export const SearchBar: React.FC<SearchBarProps> = ({
     }
   }, [isOpen]);
 
-  // 2. Perform debounced search
+  // 2. Perform debounced fuzzy search
   useEffect(() => {
-    if (!debouncedQuery) {
+    if (!debouncedQuery.trim()) {
       setResults([]);
       setIsSearching(false);
       return;
@@ -94,12 +84,28 @@ export const SearchBar: React.FC<SearchBarProps> = ({
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault();
+      
+      // 1. If user navigated to an item using keyboard arrow keys
       if (activeIndex >= 0 && activeIndex < results.length) {
         handleSelectStock(results[activeIndex]);
-      } else if (query.trim()) {
-        onSearch(query.trim());
-        setIsOpen(false);
-        setQuery('');
+        return;
+      }
+      
+      const cleanQ = query.trim();
+      if (!cleanQ) return;
+
+      const matched = SearchService.search(cleanQ);
+
+      // 2. Only navigate if there is a high-confidence match (matchScore >= 750 and not fuzzy-only)
+      if (matched.length > 0 && !matched[0].isFuzzySuggestion && (matched[0].matchScore || 0) >= 750) {
+        handleSelectStock(matched[0]);
+      } else {
+        // INVALID SEARCH / ZERO MATCHES / WEAK MATCH:
+        // DO NOT NAVIGATE!
+        // DO NOT TRIGGER ANALYSIS!
+        // DO NOT CHANGE CURRENTLY SELECTED STOCK!
+        // Keep dropdown open displaying suggestions or "Did you mean..."
+        setIsOpen(true);
       }
     } else {
       hookKeyDown(e);
@@ -128,7 +134,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
 
         {/* Left Search Icon */}
         <div className={`absolute text-textMuted ${compact ? 'left-3' : 'left-4'}`}>
-          <Search className={compact ? 'w-4 h-4' : 'w-5 h-5'} />
+          <Search className={compact ? 'w-4 h-4 text-brand' : 'w-5 h-5 text-brand'} />
         </div>
 
         {/* Right Loading Spinner */}
