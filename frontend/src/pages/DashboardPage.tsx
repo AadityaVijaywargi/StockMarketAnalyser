@@ -12,8 +12,11 @@ import { TradeSignalPanel } from '../components/TradeSignalPanel';
 import { ActiveTradePanel } from '../components/ActiveTradePanel';
 import { TradePerformanceDashboard } from '../components/TradePerformanceDashboard';
 import { PredictionPanel } from '../components/PredictionPanel';
+import { PriceAlertsPanel } from '../components/PriceAlertsPanel';
 import { apiService } from '../services/api';
 import { useNotifications } from '../context/NotificationContext';
+import { priceAlertsService } from '../services/price_alerts_service';
+import { notificationService } from '../services/notification_service';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSearchParams } from 'react-router-dom';
 
@@ -106,6 +109,16 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         if (isMounted) {
           setLatestQuote(quote);
           setLastUpdated(new Date().toLocaleTimeString());
+
+          priceAlertsService.checkPrice(report.ticker, quote.price, (alert) => {
+            notificationService.notifyPriceAlert({
+              ticker: alert.ticker,
+              company_name: alert.company_name,
+              direction: alert.direction,
+              target_price: alert.target_price,
+              current_price: quote.price,
+            });
+          });
 
           // Update latest candlestick on the local report copy
           setLocalReport(prev => {
@@ -267,9 +280,17 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         </div>
 
         <div className="w-full">
-          <ActiveTradePanel 
-            ticker={activeReport.ticker} 
-            latestPrice={latestQuote?.price || (activeReport.chart_data.close[activeReport.chart_data.close.length - 1])} 
+          <PriceAlertsPanel
+            ticker={activeReport.ticker}
+            companyName={activeReport.company_name}
+            currentPrice={latestQuote?.price || (activeReport.chart_data.close[activeReport.chart_data.close.length - 1])}
+          />
+        </div>
+
+        <div className="w-full">
+          <ActiveTradePanel
+            ticker={activeReport.ticker}
+            latestPrice={latestQuote?.price || (activeReport.chart_data.close[activeReport.chart_data.close.length - 1])}
           />
         </div>
 

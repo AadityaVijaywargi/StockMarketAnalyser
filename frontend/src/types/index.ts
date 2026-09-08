@@ -427,7 +427,18 @@ export interface AppNotification {
   timeline?: NotificationTimelineEntry[];
 }
 
-export type TradeStatus = 
+export interface PriceAlert {
+  id: string;
+  ticker: string;
+  company_name: string;
+  target_price: number;
+  direction: 'above' | 'below';
+  created_at: string;
+  triggered: boolean;
+  triggered_at?: string;
+}
+
+export type TradeStatus =
   | 'ACTIVE' 
   | 'TARGET_REACHED' 
   | 'STOP_LOSS_REACHED' 

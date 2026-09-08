@@ -315,6 +315,37 @@ export class NotificationService {
     };
     this.saveNotifications([notification, ...currentNotifs]);
   }
+
+  notifyPriceAlert(params: {
+    ticker: string;
+    company_name: string;
+    direction: 'above' | 'below';
+    target_price: number;
+    current_price: number;
+  }): void {
+    const currentNotifs = this.getNotifications();
+    const notification: AppNotification = {
+      id: `notif_${params.ticker.toUpperCase().trim()}_price_${Date.now()}`,
+      ticker: params.ticker,
+      company_name: params.company_name,
+      type: 'PRICE_ALERT',
+      category: 'PRICE_ALERTS',
+      priority: 'HIGH',
+      severity: 'IMPORTANT',
+      old_recommendation: 'ALERT SET',
+      new_recommendation: params.direction === 'above' ? 'PRICE ABOVE' : 'PRICE BELOW',
+      old_confidence: 100,
+      new_confidence: 100,
+      change_reason: [
+        `${params.ticker.replace('.NS', '').replace('.BO', '')} crossed ${params.direction} your ₹${params.target_price.toFixed(2)} alert (current: ₹${params.current_price.toFixed(2)}).`
+      ],
+      target_price: params.target_price,
+      timestamp: new Date().toISOString(),
+      read: false,
+      timeline: []
+    };
+    this.saveNotifications([notification, ...currentNotifs]);
+  }
 }
 
 export const notificationService = new NotificationService();
