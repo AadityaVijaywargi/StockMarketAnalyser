@@ -1,7 +1,9 @@
 import React from 'react';
 import { Bell, Sun } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { SearchBar } from './search/SearchBar';
 import { useNotifications } from '../context/NotificationContext';
+import { useAuth } from '../context/AuthContext';
 
 interface TopNavbarProps {
   onSearch: (ticker: string) => void;
@@ -10,6 +12,11 @@ interface TopNavbarProps {
 
 export const TopNavbar: React.FC<TopNavbarProps> = ({ onSearch, isLoading }) => {
   const { unreadCount, toggleOpen, isOpen } = useNotifications();
+  const { username, isAdmin } = useAuth();
+  const navigate = useNavigate();
+
+  const displayName = username || 'User';
+  const initials = displayName.slice(0, 2).toUpperCase();
 
   return (
     <div className="h-16 bg-surface border-b border-borderDark flex items-center justify-between px-6 sticky top-0 z-30 shrink-0">
@@ -50,16 +57,20 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({ onSearch, isLoading }) => 
 
         <div className="h-6 w-px bg-borderDark" />
 
-        {/* Profile user badge */}
-        <div className="flex items-center gap-2.5 pl-1 cursor-pointer group">
+        {/* Profile user badge - links to Settings (account/logout live there) */}
+        <button
+          onClick={() => navigate('/settings')}
+          title="Account settings"
+          className="flex items-center gap-2.5 pl-1 cursor-pointer group"
+        >
           <div className="w-7 h-7 rounded-full bg-brand/10 border border-brand/20 flex items-center justify-center text-brand font-mono font-bold text-xs">
-            AD
+            {initials}
           </div>
           <div className="hidden sm:flex flex-col text-left">
-            <span className="text-[11px] font-bold text-white leading-none">Aadi</span>
-            <span className="text-[9px] text-textMuted leading-none mt-1">Research Lead</span>
+            <span className="text-[11px] font-bold text-white leading-none group-hover:text-brand transition-colors">{displayName}</span>
+            <span className="text-[9px] text-textMuted leading-none mt-1">{isAdmin ? 'Admin' : 'Member'}</span>
           </div>
-        </div>
+        </button>
       </div>
     </div>
   );

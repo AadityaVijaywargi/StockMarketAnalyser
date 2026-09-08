@@ -100,9 +100,13 @@ export const ChartPage: React.FC = () => {
   };
 
   const favorite = isFavorite(ticker);
-  const changePct = report ? ((report.chart_data.close[report.chart_data.close.length - 1] -
-    report.chart_data.close[report.chart_data.close.length - 2]) /
-    report.chart_data.close[report.chart_data.close.length - 2]) * 100 : 0;
+  // A ticker with fewer than 2 close prices (e.g. a stock newly listed
+  // with limited history) left this dividing by close[-2] === undefined,
+  // rendering "NaN%" in the price strip instead of just omitting change.
+  const closes = report?.chart_data.close || [];
+  const changePct = closes.length >= 2 && closes[closes.length - 2] > 0
+    ? ((closes[closes.length - 1] - closes[closes.length - 2]) / closes[closes.length - 2]) * 100
+    : 0;
   const lastPrice = report?.chart_data.close[report.chart_data.close.length - 1];
 
   return (
