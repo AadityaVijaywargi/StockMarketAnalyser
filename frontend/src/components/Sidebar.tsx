@@ -17,9 +17,30 @@ interface SidebarProps {
   onSearchClick: () => void;
 }
 
+const DESKTOP_QUERY = '(min-width: 1024px)';
+
 export const Sidebar: React.FC<SidebarProps> = ({ onSearchClick }) => {
   const location = useLocation();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+
+  // Whether to use the static desktop layout vs. the off-canvas mobile
+  // drawer is decided here in JS via matchMedia, not by layering a `lg:`
+  // Tailwind override on top of an always-applied `-translate-x-full`.
+  // That override approach depends on the compiled stylesheet's rule
+  // order/specificity lining up exactly right, which held locally but
+  // silently broke on the production (Vercel) build - the sidebar's
+  // transform never resolved back to 0 at desktop widths, hiding it
+  // entirely. Deciding in JS removes that fragility altogether.
+  const [isDesktop, setIsDesktop] = useState(() =>
+    typeof window !== 'undefined' ? window.matchMedia(DESKTOP_QUERY).matches : true
+  );
+
+  useEffect(() => {
+    const mql = window.matchMedia(DESKTOP_QUERY);
+    const handler = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
+    mql.addEventListener('change', handler);
+    return () => mql.removeEventListener('change', handler);
+  }, []);
 
   // Close the off-canvas drawer on every navigation (mobile only - harmless
   // no-op on desktop where the drawer classes never apply).
@@ -54,38 +75,44 @@ export const Sidebar: React.FC<SidebarProps> = ({ onSearchClick }) => {
   return (
     <>
       {/* Mobile menu trigger - only shown when the drawer is closed on small screens */}
-      <button
-        onClick={() => setIsMobileOpen(true)}
-        aria-label="Open navigation menu"
-        className={`lg:hidden fixed top-4 left-4 z-50 w-10 h-10 rounded-xl bg-surface border border-borderDark flex items-center justify-center text-white shadow-lg transition-opacity ${
-          isMobileOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'
-        }`}
-      >
-        <Menu className="w-5 h-5" />
-      </button>
+      {!isDesktop && (
+        <button
+          onClick={() => setIsMobileOpen(true)}
+          aria-label="Open navigation menu"
+          className={`fixed top-4 left-4 z-50 w-10 h-10 rounded-xl bg-surface border border-borderDark flex items-center justify-center text-white shadow-lg transition-opacity ${
+            isMobileOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'
+          }`}
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+      )}
 
       {/* Backdrop, mobile only, while the drawer is open */}
-      {isMobileOpen && (
+      {!isDesktop && isMobileOpen && (
         <div
           onClick={() => setIsMobileOpen(false)}
-          className="lg:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
         />
       )}
 
       <aside
-        className={`w-64 bg-surface border-r border-borderDark flex flex-col justify-between h-screen fixed top-0 left-0 z-50 transition-transform duration-300 ease-in-out lg:sticky lg:translate-x-0 ${
-          isMobileOpen ? 'translate-x-0' : '-translate-x-full'
+        className={`w-64 bg-surface border-r border-borderDark flex flex-col justify-between h-screen z-50 transition-transform duration-300 ease-in-out ${
+          isDesktop
+            ? 'sticky top-0'
+            : `fixed top-0 left-0 ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'}`
         }`}
       >
       <div className="flex flex-col">
         {/* Logo/Branding Section */}
-        <button
-          onClick={() => setIsMobileOpen(false)}
-          aria-label="Close navigation menu"
-          className="lg:hidden absolute top-4 right-4 w-8 h-8 rounded-lg hover:bg-white/[0.05] flex items-center justify-center text-textMuted hover:text-white"
-        >
-          <X className="w-4.5 h-4.5" />
-        </button>
+        {!isDesktop && (
+          <button
+            onClick={() => setIsMobileOpen(false)}
+            aria-label="Close navigation menu"
+            className="absolute top-4 right-4 w-8 h-8 rounded-lg hover:bg-white/[0.05] flex items-center justify-center text-textMuted hover:text-white"
+          >
+            <X className="w-4.5 h-4.5" />
+          </button>
+        )}
         <Link
           to="/"
           onClick={onSearchClick}
