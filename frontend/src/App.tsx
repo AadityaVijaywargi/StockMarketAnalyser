@@ -8,6 +8,7 @@ import { PortfolioPage } from './pages/PortfolioPage';
 import { BacktestingPage } from './pages/BacktestingPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { ChartPage } from './pages/ChartPage';
+import { ComparePage } from './pages/ComparePage';
 import { LoginPage } from './pages/LoginPage';
 import { SignupPage } from './pages/SignupPage';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -345,6 +346,10 @@ export const App: React.FC = () => {
           <Route
             path="/chart/:ticker"
             element={<ProtectedRoute><ChartPage /></ProtectedRoute>}
+          />
+          <Route
+            path="/compare"
+            element={<ProtectedRoute><ComparePage /></ProtectedRoute>}
           />
           {/* Catch-all fallback redirect */}
           <Route path="*" element={<Navigate to="/" replace />} />

@@ -9,7 +9,8 @@ import {
   Settings,
   Search,
   Menu,
-  X
+  X,
+  GitCompare
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 
@@ -68,6 +69,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onSearchClick }) => {
     { name: 'Watchlist', path: '/watchlist', icon: Star },
     { name: 'Market Overview', path: '/market', icon: Globe },
     { name: 'Portfolio', path: '/portfolio', icon: Briefcase },
+    { name: 'Compare', path: '/compare', icon: GitCompare },
     { name: 'Backtesting', path: '/backtesting', icon: Play },
     { name: 'Settings', path: '/settings', icon: Settings },
   ];
