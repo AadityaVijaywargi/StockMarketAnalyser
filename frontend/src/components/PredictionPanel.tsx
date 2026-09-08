@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { PredictionHorizon, PredictionResult } from '../types';
-import { Sparkles, TrendingUp, TrendingDown, Target, Shield, AlertTriangle } from 'lucide-react';
+import { Sparkles, TrendingUp, TrendingDown, Target, Shield, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface PredictionPanelProps {
   prediction: PredictionResult | null;
@@ -18,7 +18,10 @@ const recColors: Record<string, string> = {
   'STRONG SELL': 'bg-rose-600/20 text-rose-400 border-rose-600/40 font-bold',
 };
 
-export const PredictionPanel: React.FC<PredictionPanelProps> = ({ prediction, horizon, onHorizonChange }) => (
+export const PredictionPanel: React.FC<PredictionPanelProps> = ({ prediction, horizon, onHorizonChange }) => {
+  const [trackRecordOpen, setTrackRecordOpen] = useState(false);
+
+  return (
   <div className="bg-surface border border-borderDark p-6 rounded-2xl flex flex-col gap-5">
     <div className="flex flex-wrap items-center justify-between gap-4 border-b border-borderDark pb-4">
       <div className="flex items-center gap-2.5">
@@ -83,6 +86,35 @@ export const PredictionPanel: React.FC<PredictionPanelProps> = ({ prediction, ho
           </div>
         </div>
 
+        {/* Honest Model Track Record - probability/confidence above are a
+            single input, not a guarantee; this grounds them in how the
+            model has actually performed historically. */}
+        <div className="rounded-xl bg-amber-500/5 border border-amber-500/20 overflow-hidden">
+          <button
+            onClick={() => setTrackRecordOpen(o => !o)}
+            className="w-full flex items-center justify-between gap-2.5 p-3.5 text-left"
+          >
+            <div className="flex items-start gap-2.5">
+              <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+              <span className="text-[11px] text-textMuted leading-relaxed">
+                <span className="text-amber-400 font-bold">Model track record: </span>
+                1-day directional calls were correct <span className="text-white font-bold">45.6%</span> of the time in an honest out-of-sample backtest — below a coin flip.
+              </span>
+            </div>
+            {trackRecordOpen ? <ChevronUp className="w-3.5 h-3.5 text-textMuted shrink-0 mt-0.5" /> : <ChevronDown className="w-3.5 h-3.5 text-textMuted shrink-0 mt-0.5" />}
+          </button>
+          {trackRecordOpen && (
+            <div className="px-3.5 pb-3.5 -mt-1 text-[11px] text-textMuted leading-relaxed border-t border-amber-500/10 pt-3">
+              <p>
+                Methodology: 80 simulated trades across 10 liquid NSE stocks and 8 entry dates spread over 6 months, each using only data available up to that entry day (no lookahead bias) with the same production prediction engine. 26 of 57 directional (UP/DOWN) calls were correct; the other 23 calls were NEUTRAL. Win rate on P&amp;L was 42.1%.
+              </p>
+              <p className="mt-2">
+                Treat probability and confidence as one input among the reasons listed below — not a signal to act on alone. This is a research aid, not investment advice.
+              </p>
+            </div>
+          )}
+        </div>
+
         {/* Metric Cards Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
           <div className="p-3 bg-background/60 border border-borderDark/60 rounded-xl">
@@ -129,4 +161,5 @@ export const PredictionPanel: React.FC<PredictionPanelProps> = ({ prediction, ho
       <div className="p-6 text-center text-xs text-textMuted">Computing prediction model...</div>
     )}
   </div>
-);
+  );
+};
