@@ -30,6 +30,7 @@ interface MonitoredStockState {
   eventOverrideApplied: boolean;
   predictionTrend: PredictionTrend;
   lastUpdated: string;
+  lastUpdatedTs: number;
   inputHash?: string;
   priority: 1 | 2 | 3;
   history: RecommendationHistoryEntry[];
@@ -125,6 +126,7 @@ export class WatchlistMonitorService {
           eventOverrideApplied: false,
           predictionTrend: 'Stable',
           lastUpdated: 'Initializing...',
+          lastUpdatedTs: 0,
           priority: 2,
           history: []
         });
@@ -175,8 +177,7 @@ export class WatchlistMonitorService {
         state.priority = this.computePriority(state);
         const refreshIntervalMs = state.priority === 1 ? 15000 : (state.priority === 2 ? 35000 : 65000);
         
-        const lastTime = state.lastUpdated === 'Initializing...' ? 0 : new Date(`1970-01-01T${state.lastUpdated}`).getTime();
-        if (force || now - lastTime >= refreshIntervalMs || state.lastUpdated === 'Initializing...') {
+        if (force || now - state.lastUpdatedTs >= refreshIntervalMs || state.lastUpdated === 'Initializing...') {
           tickersToFetch.push(state.ticker);
         }
       }
@@ -194,9 +195,10 @@ export class WatchlistMonitorService {
           const pred: PredictionResult = data.prediction;
 
           // Input Hash Caching
-          const newHash = `${quote.price}_${quote.volume}_${pred.recommendation}_${pred.probability}`;
+          const newHash = `${quote.price}_${quote.volume}_${pred.recommendation}_${pred.probability}_${pred.target_price}_${pred.stop_loss}`;
           if (!force && state.inputHash === newHash) {
             this.cacheHitCount++;
+            state.lastUpdatedTs = now;
           } else {
             state.inputHash = newHash;
             state.quote = quote;
@@ -209,6 +211,7 @@ export class WatchlistMonitorService {
             state.stopLoss = pred.stop_loss;
             state.eventOverrideApplied = pred.event_override_applied;
             state.lastUpdated = new Date().toLocaleTimeString('en-GB');
+            state.lastUpdatedTs = now;
 
             // Record History
             const historyEntry: RecommendationHistoryEntry = {

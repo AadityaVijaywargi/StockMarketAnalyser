@@ -107,8 +107,12 @@ class DeterministicPredictionEngine(BasePredictionEngine):
         move_mult = self.HORIZON_MOVE_MULTIPLIERS.get(horizon_clean, 1.0)
         move_pct = atr_pct * move_mult * (1.0 if direction == "UP" else (-1.0 if direction == "DOWN" else 0.0))
 
+        # target moves with the predicted direction; stop moves against it. Using
+        # abs(move_pct) for both here previously collapsed them to the same price
+        # whenever direction was DOWN (move_pct negative), producing a zero-reward
+        # target == stop_loss setup.
         target = close * (1.0 + move_pct / 100.0) if direction != "NEUTRAL" else close * 1.02
-        stop = close * (1.0 - abs(move_pct) / 100.0) if direction != "NEUTRAL" else close * 0.98
+        stop = close * (1.0 - move_pct / 100.0) if direction != "NEUTRAL" else close * 0.98
 
         # Synthesize clear, bulleted reasons
         reasons = list(event_reasons)
