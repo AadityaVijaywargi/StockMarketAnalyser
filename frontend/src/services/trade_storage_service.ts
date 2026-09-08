@@ -1,5 +1,5 @@
 import { StorageProvider } from './storage_provider';
-import { LocalStorageProvider } from './local_storage_provider';
+import { CloudStorageProvider } from './cloud_storage_provider';
 import { TrackedTrade, TradePerformanceSummary, TradeStatus } from '../types';
 import { notificationService } from './notification_service';
 
@@ -7,6 +7,7 @@ export const TRADE_STORAGE_UPDATED_EVENT = 'stonks_trades_updated';
 
 export class TradeStorageService {
   private storage: StorageProvider;
+  private cloudStorage: CloudStorageProvider | null;
   private activeKey: string;
   private completedKey: string;
 
@@ -15,9 +16,26 @@ export class TradeStorageService {
     activeKey: string = 'stonks_active_trades',
     completedKey: string = 'stonks_completed_trades'
   ) {
-    this.storage = storageProvider || new LocalStorageProvider();
+    if (storageProvider) {
+      this.storage = storageProvider;
+      this.cloudStorage = null;
+    } else {
+      const cloud = new CloudStorageProvider();
+      this.storage = cloud;
+      this.cloudStorage = cloud;
+    }
     this.activeKey = activeKey;
     this.completedKey = completedKey;
+  }
+
+  /** Pulls this user's active + completed trades down from the backend. */
+  async syncFromCloud(): Promise<void> {
+    if (!this.cloudStorage) return;
+    const [activeChanged, completedChanged] = await Promise.all([
+      this.cloudStorage.hydrate(this.activeKey),
+      this.cloudStorage.hydrate(this.completedKey),
+    ]);
+    if (activeChanged || completedChanged) this.notifyListeners();
   }
 
   private notifyListeners(): void {

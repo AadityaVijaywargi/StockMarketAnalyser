@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from api.routers import health, analysis, market_opportunities, intelligence, backtest, auth
+from api.routers import health, analysis, market_opportunities, intelligence, backtest, auth, user_data
 from api.auth import decode_access_token
 from api.exceptions import PlatformException, platform_exception_handler, generic_exception_handler
 import jwt
@@ -64,7 +64,8 @@ def create_app() -> FastAPI:
     app.include_router(market_opportunities.router)
     app.include_router(intelligence.router)
     app.include_router(backtest.router)
-    
+    app.include_router(user_data.router)
+
     # Register Centralized Error Handlers
     app.add_exception_handler(PlatformException, platform_exception_handler)
     app.add_exception_handler(Exception, generic_exception_handler)

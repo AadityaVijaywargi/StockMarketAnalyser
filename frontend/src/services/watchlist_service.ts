@@ -1,16 +1,35 @@
 import { StorageProvider } from './storage_provider';
-import { LocalStorageProvider } from './local_storage_provider';
+import { CloudStorageProvider } from './cloud_storage_provider';
 import { WatchlistItem } from '../types';
 
 export const WATCHLIST_UPDATED_EVENT = 'stonks_watchlist_updated';
 
 export class WatchlistService {
   private storage: StorageProvider;
+  private cloudStorage: CloudStorageProvider | null;
   private storageKey: string;
 
   constructor(storageProvider?: StorageProvider, storageKey: string = 'watchlist') {
-    this.storage = storageProvider || new LocalStorageProvider();
+    if (storageProvider) {
+      this.storage = storageProvider;
+      this.cloudStorage = null;
+    } else {
+      const cloud = new CloudStorageProvider();
+      this.storage = cloud;
+      this.cloudStorage = cloud;
+    }
     this.storageKey = storageKey;
+  }
+
+  /**
+   * Pulls this user's watchlist down from the backend (if signed in) and,
+   * if it differs from what's already in this browser, overwrites local
+   * storage and notifies listeners so mounted UI refreshes.
+   */
+  async syncFromCloud(): Promise<void> {
+    if (!this.cloudStorage) return;
+    const changed = await this.cloudStorage.hydrate(this.storageKey);
+    if (changed) this.notifyListeners();
   }
 
   /**
