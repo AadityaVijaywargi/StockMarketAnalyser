@@ -320,14 +320,16 @@ class RuleBasedScorer(BaseScorer):
         vola_total = 0
         
         # Annualized Volatility
+        hv = None
         hist_vol_col = [col for col in features_df.columns if col.startswith("Hist_Vol_")]
         if hist_vol_col and pd.notnull(features_df[hist_vol_col[0]].iloc[-1]):
             hv = float(features_df[hist_vol_col[0]].iloc[-1])
             # Scale continuously: 15% (30 pts) to 45% (0 pts)
             vola_pts += min(max((45.0 - hv) / 30.0, 0.0), 1.0) * 30.0
             vola_total += 30
-            
+
         # ATR Percentage
+        atr = None
         atr_col = [col for col in features_df.columns if col.startswith("ATR_")]
         if atr_col and pd.notnull(features_df[atr_col[0]].iloc[-1]):
             atr = float(features_df[atr_col[0]].iloc[-1])
@@ -508,8 +510,8 @@ class RuleBasedScorer(BaseScorer):
         )
 
         # Multi-factor Risk Calibration (Volatility, Drawdown, Trend, Support, Patterns, VIX)
-        atr_percent = (float(features_df[atr_col[0]].iloc[-1]) / close) * 100.0 if atr_col else 2.0
-        hv_val = hv if hist_vol_col else 20.0
+        atr_percent = (atr / close) * 100.0 if atr is not None else 2.0
+        hv_val = hv if hv is not None else 20.0
         
         vola_component = min((atr_percent / 4.0 * 25.0) + (hv_val / 50.0 * 25.0), 45.0)
         trend_component = max((50.0 - trend_score) * 0.4, 0.0)
@@ -530,7 +532,7 @@ class RuleBasedScorer(BaseScorer):
 
         risk_profile = RiskProfile(
             level=risk_level,
-            atr_percentage=round(atr_percent, 2) if atr_col else 2.0,
+            atr_percentage=round(atr_percent, 2),
             annualized_volatility=round(hv_val, 2),
             vix_regime=vix_regime,
             liquidity_score=round(min(vol_ratio * 40.0, 100.0), 2)
