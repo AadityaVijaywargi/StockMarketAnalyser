@@ -41,6 +41,12 @@ export class PriceAlertsService {
   }
 
   addAlert(ticker: string, companyName: string, targetPrice: number, direction: 'above' | 'below'): PriceAlert {
+    const cleanTicker = ticker.toUpperCase().trim();
+    const existing = this.getAlerts().find(a =>
+      !a.triggered && a.ticker.toUpperCase() === cleanTicker && a.direction === direction && a.target_price === targetPrice
+    );
+    if (existing) return existing;
+
     const alert: PriceAlert = {
       id: `alert_${ticker.toUpperCase()}_${Date.now()}`,
       ticker: ticker.toUpperCase().trim(),

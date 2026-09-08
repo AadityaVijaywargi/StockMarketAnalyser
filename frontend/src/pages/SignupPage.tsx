@@ -27,14 +27,27 @@ export const SignupPage: React.FC = () => {
       setError('Password must be at least 8 characters.');
       return;
     }
+    if (!/^[A-Za-z0-9_.-]+$/.test(username.trim())) {
+      setError('Username can only contain letters, numbers, underscores, dots, and hyphens.');
+      return;
+    }
 
     setIsLoading(true);
     try {
       await signup(inviteCode.trim(), username.trim(), password);
       navigate('/', { replace: true });
     } catch (err: any) {
+      // FastAPI validation errors (422) send `detail` as an array of
+      // {msg, loc, ...} objects rather than a string - rendering that
+      // directly as JSX would crash the page, so always coerce to a string.
       const detail = err?.response?.data?.detail;
-      setError(detail || 'Sign up failed. Check your invite code and try again.');
+      let message = 'Sign up failed. Check your invite code and try again.';
+      if (typeof detail === 'string') {
+        message = detail;
+      } else if (Array.isArray(detail) && detail.length > 0) {
+        message = detail.map((d: any) => d.msg || String(d)).join(' ');
+      }
+      setError(message);
     } finally {
       setIsLoading(false);
     }

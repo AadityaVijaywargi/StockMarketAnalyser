@@ -25,7 +25,11 @@ class LoginResponse(BaseModel):
 
 class SignupRequest(BaseModel):
     invite_code: str
-    username: str = Field(min_length=3, max_length=32)
+    # Must match api/user_data_store.py's _SAFE_NAME pattern: usernames are
+    # used to build a per-user filename for cloud-synced data, so a username
+    # outside this charset would sign up successfully but then hit an
+    # unhandled ValueError (and silently fail) on every /me/data/ call.
+    username: str = Field(min_length=3, max_length=32, pattern=r"^[A-Za-z0-9_.-]+$")
     password: str = Field(min_length=8)
 
 

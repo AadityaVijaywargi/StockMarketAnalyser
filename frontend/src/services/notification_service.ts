@@ -142,11 +142,17 @@ export class NotificationService {
       reasons.push(`Confidence score adjusted from ${prevConf.toFixed(0)}% to ${currentConf.toFixed(0)}%.`);
     }
 
-    if (prevTarget && prevTarget > 0 && Math.abs(targetPrice - prevTarget) / prevTarget >= 0.02) {
+    // Guarded on `pred` (not just prevTarget/prevStop): the backend silently
+    // omits `prediction` from a report when the prediction engine throws for
+    // that cycle, which left targetPrice/stopLoss defaulted to 0.0 here and
+    // produced a bogus "updated to ₹0.00" message any time some other change
+    // (e.g. confidence) triggered this method with no fresh prediction data
+    // to actually compare against.
+    if (pred && prevTarget && prevTarget > 0 && Math.abs(targetPrice - prevTarget) / prevTarget >= 0.02) {
       reasons.push(`Target price updated to ₹${targetPrice.toFixed(2)} (Expected move: ${expectedMove >= 0 ? '+' : ''}${expectedMove}%).`);
     }
 
-    if (prevStop && prevStop > 0 && Math.abs(stopLoss - prevStop) / prevStop >= 0.02) {
+    if (pred && prevStop && prevStop > 0 && Math.abs(stopLoss - prevStop) / prevStop >= 0.02) {
       reasons.push(`Stop-loss adjusted to ₹${stopLoss.toFixed(2)}.`);
     }
 
@@ -271,8 +277,12 @@ export class NotificationService {
       recommendation: newRec,
       confidence: newConf,
       overallScore: newScore,
-      targetPrice: newTarget,
-      stopLoss: newStop,
+      // Preserve the last known real target/stop when this cycle's report
+      // has no prediction data, rather than overwriting with undefined -
+      // otherwise a single cycle with a missing prediction would discard
+      // the baseline the next genuine change gets compared against.
+      targetPrice: newTarget ?? prevState.targetPrice,
+      stopLoss: newStop ?? prevState.stopLoss,
       tradeSignal: newSignal,
       lifecycleStatus: newLifecycle,
       timestamp: new Date().toISOString(),

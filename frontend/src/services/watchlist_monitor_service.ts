@@ -2,6 +2,7 @@ import { apiService } from './api';
 import { watchlistService, WATCHLIST_UPDATED_EVENT } from './watchlist_service';
 import { notificationService } from './notification_service';
 import { tradeStorageService } from './trade_storage_service';
+import { priceAlertsService } from './price_alerts_service';
 import { 
   WatchlistItem, 
   LiveQuote, 
@@ -248,6 +249,21 @@ export class WatchlistMonitorService {
 
             // Trigger Smart Notification Service
             notificationService.checkAndNotify(reportPayload, true);
+
+            // Price alerts previously only got checked from the poll loop
+            // on that specific stock's open dashboard page, so an alert on
+            // a stock the user wasn't currently viewing would never fire.
+            // This background monitor already polls a live quote for every
+            // watched stock, so check alerts here too.
+            priceAlertsService.checkPrice(state.ticker, quote.price, (alert) => {
+              notificationService.notifyPriceAlert({
+                ticker: alert.ticker,
+                company_name: alert.company_name,
+                direction: alert.direction,
+                target_price: alert.target_price,
+                current_price: quote.price,
+              });
+            });
           }
         }
       }

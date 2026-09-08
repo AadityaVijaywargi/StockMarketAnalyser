@@ -27,12 +27,6 @@ export const PriceAlertsPanel: React.FC<PriceAlertsPanelProps> = ({ ticker, comp
     return () => window.removeEventListener(PRICE_ALERTS_UPDATED_EVENT, handleUpdate);
   }, [ticker]);
 
-  useEffect(() => {
-    if (currentPrice && !targetInput) {
-      setDirection('above');
-    }
-  }, [currentPrice]);
-
   const handleAdd = () => {
     const price = parseFloat(targetInput);
     if (!price || price <= 0) return;
