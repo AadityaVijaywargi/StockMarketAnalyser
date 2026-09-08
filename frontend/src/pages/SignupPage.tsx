@@ -1,30 +1,40 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Lock, Loader2, AlertCircle, TrendingUp } from 'lucide-react';
-import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { UserPlus, Loader2, AlertCircle, TrendingUp } from 'lucide-react';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
-export const LoginPage: React.FC = () => {
+export const SignupPage: React.FC = () => {
+  const [searchParams] = useSearchParams();
+  const [inviteCode, setInviteCode] = useState(searchParams.get('code') || '');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const { signup } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
-
-  const from = (location.state as { from?: string })?.from || '/';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters.');
+      return;
+    }
+
     setIsLoading(true);
     try {
-      await login(username.trim(), password);
-      navigate(from, { replace: true });
+      await signup(inviteCode.trim(), username.trim(), password);
+      navigate('/', { replace: true });
     } catch (err: any) {
       const detail = err?.response?.data?.detail;
-      setError(detail || 'Login failed. Check your username and password.');
+      setError(detail || 'Sign up failed. Check your invite code and try again.');
     } finally {
       setIsLoading(false);
     }
@@ -46,10 +56,23 @@ export const LoginPage: React.FC = () => {
             <TrendingUp className="w-5 h-5 text-brand" />
           </div>
           <h1 className="font-extrabold text-lg text-white font-mono tracking-tight">STONKS</h1>
-          <p className="text-xs text-textMuted">Sign in to access the research platform</p>
+          <p className="text-xs text-textMuted">Sign up with an invite code</p>
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[11px] font-semibold text-textMuted font-mono uppercase tracking-wider">Invite Code</label>
+            <input
+              type="text"
+              value={inviteCode}
+              onChange={e => setInviteCode(e.target.value)}
+              autoComplete="off"
+              autoFocus={!inviteCode}
+              required
+              className="px-3.5 py-2.5 rounded-xl bg-background border border-borderDark focus:border-brand/60 outline-none text-sm text-white font-mono transition-all"
+            />
+          </div>
+
           <div className="flex flex-col gap-1.5">
             <label className="text-[11px] font-semibold text-textMuted font-mono uppercase tracking-wider">Username</label>
             <input
@@ -57,7 +80,8 @@ export const LoginPage: React.FC = () => {
               value={username}
               onChange={e => setUsername(e.target.value)}
               autoComplete="username"
-              autoFocus
+              minLength={3}
+              maxLength={32}
               required
               className="px-3.5 py-2.5 rounded-xl bg-background border border-borderDark focus:border-brand/60 outline-none text-sm text-white font-mono transition-all"
             />
@@ -69,7 +93,21 @@ export const LoginPage: React.FC = () => {
               type="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
-              autoComplete="current-password"
+              autoComplete="new-password"
+              minLength={8}
+              required
+              className="px-3.5 py-2.5 rounded-xl bg-background border border-borderDark focus:border-brand/60 outline-none text-sm text-white font-mono transition-all"
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[11px] font-semibold text-textMuted font-mono uppercase tracking-wider">Confirm Password</label>
+            <input
+              type="password"
+              value={confirmPassword}
+              onChange={e => setConfirmPassword(e.target.value)}
+              autoComplete="new-password"
+              minLength={8}
               required
               className="px-3.5 py-2.5 rounded-xl bg-background border border-borderDark focus:border-brand/60 outline-none text-sm text-white font-mono transition-all"
             />
@@ -84,21 +122,21 @@ export const LoginPage: React.FC = () => {
 
           <button
             type="submit"
-            disabled={isLoading || !username || !password}
+            disabled={isLoading || !inviteCode || !username || !password || !confirmPassword}
             className="flex items-center justify-center gap-2 mt-1 px-4 py-2.5 rounded-xl bg-brand text-black font-bold text-sm font-mono transition-all hover:brightness-110 disabled:opacity-40 disabled:pointer-events-none"
           >
-            {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />}
-            <span>{isLoading ? 'Signing in...' : 'Sign In'}</span>
+            {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
+            <span>{isLoading ? 'Creating account...' : 'Create Account'}</span>
           </button>
         </form>
 
         <p className="text-center text-xs text-textMuted">
-          Have an invite code?{' '}
-          <Link to="/signup" className="text-brand hover:underline font-semibold">Sign up</Link>
+          Already have an account?{' '}
+          <Link to="/login" className="text-brand hover:underline font-semibold">Sign in</Link>
         </p>
       </motion.div>
     </div>
   );
 };
 
-export default LoginPage;
+export default SignupPage;

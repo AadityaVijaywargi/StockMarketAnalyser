@@ -1,14 +1,130 @@
-import React, { useState } from 'react';
-import { Settings as SettingsIcon, Bell, Target, Trash2, AlertTriangle, CheckCircle2, Info, LogOut, UserCircle2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Settings as SettingsIcon, Bell, Target, Trash2, AlertTriangle, CheckCircle2, Info, LogOut, UserCircle2, Ticket, Copy, Check, XCircle } from 'lucide-react';
 import { settingsService, AppSettings } from '../services/settings_service';
 import { useAuth } from '../context/AuthContext';
+import { apiService } from '../services/api';
 import { useNavigate } from 'react-router-dom';
+
+interface InviteInfo {
+  code: string;
+  created_by: string;
+  created_at: string;
+  used: boolean;
+  used_by: string | null;
+}
+
+const InvitesPanel: React.FC = () => {
+  const [invites, setInvites] = useState<InviteInfo[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const refresh = async () => {
+    setIsLoading(true);
+    try {
+      const data = await apiService.listInvites();
+      setInvites(data.reverse());
+    } catch (e) {
+      setError('Failed to load invites.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => { refresh(); }, []);
+
+  const handleGenerate = async () => {
+    setError(null);
+    try {
+      await apiService.createInvite();
+      await refresh();
+    } catch (e) {
+      setError('Failed to generate invite.');
+    }
+  };
+
+  const handleRevoke = async (code: string) => {
+    try {
+      await apiService.revokeInvite(code);
+      await refresh();
+    } catch (e) {
+      setError('Failed to revoke invite.');
+    }
+  };
+
+  const handleCopy = (code: string) => {
+    const link = `${window.location.origin}/signup?code=${code}`;
+    navigator.clipboard.writeText(link).then(() => {
+      setCopiedCode(code);
+      setTimeout(() => setCopiedCode(null), 2000);
+    }).catch(() => setError('Could not copy to clipboard — copy the code manually.'));
+  };
+
+  return (
+    <div className="bg-surface border border-borderDark p-5 rounded-2xl shadow-lg flex flex-col gap-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-bold text-sm text-white font-mono flex items-center gap-2">
+          <Ticket className="w-4 h-4 text-brand" />
+          <span>Invites</span>
+        </h3>
+        <button
+          onClick={handleGenerate}
+          className="px-3.5 py-1.5 rounded-lg bg-brand text-black text-xs font-mono font-bold hover:brightness-110 transition-all"
+        >
+          Generate Invite
+        </button>
+      </div>
+      <p className="text-[11px] text-textMuted -mt-2">Share a generated link so someone else can create their own account.</p>
+
+      {error && <p className="text-xs text-bearish font-mono">{error}</p>}
+
+      {isLoading ? (
+        <p className="text-xs text-textMuted">Loading...</p>
+      ) : invites.length === 0 ? (
+        <p className="text-xs text-textMuted">No invites yet.</p>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {invites.map(invite => (
+            <div key={invite.code} className="flex items-center justify-between gap-3 p-3 rounded-xl bg-background border border-borderDark/60">
+              <div className="min-w-0">
+                <span className="text-xs font-mono text-slate-200 truncate block">{invite.code}</span>
+                <span className={`text-[11px] font-mono ${invite.used ? 'text-textMuted' : 'text-emerald-400'}`}>
+                  {invite.used ? `Used by ${invite.used_by}` : 'Unused'}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {!invite.used && (
+                  <>
+                    <button
+                      onClick={() => handleCopy(invite.code)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.04] border border-borderDark text-slate-300 hover:text-white text-[11px] font-mono font-bold transition-all"
+                    >
+                      {copiedCode === invite.code ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                      <span>{copiedCode === invite.code ? 'Copied' : 'Copy Link'}</span>
+                    </button>
+                    <button
+                      onClick={() => handleRevoke(invite.code)}
+                      className="p-1.5 rounded-lg text-textMuted hover:text-rose-400 hover:bg-rose-500/10 transition-all"
+                      title="Revoke invite"
+                    >
+                      <XCircle className="w-3.5 h-3.5" />
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 export const SettingsPage: React.FC = () => {
   const [settings, setSettings] = useState<AppSettings>(() => settingsService.getSettings());
   const [confirmReset, setConfirmReset] = useState<boolean>(false);
   const [resetDone, setResetDone] = useState<boolean>(false);
-  const { username, logout } = useAuth();
+  const { username, isAdmin, logout } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -58,6 +174,9 @@ export const SettingsPage: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Invites (admin only) */}
+      {isAdmin && <InvitesPanel />}
 
       {/* Notification Preferences */}
       <div className="bg-surface border border-borderDark p-5 rounded-2xl shadow-lg flex flex-col gap-4">

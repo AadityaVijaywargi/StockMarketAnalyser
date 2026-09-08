@@ -9,6 +9,7 @@ import { BacktestingPage } from './pages/BacktestingPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { ChartPage } from './pages/ChartPage';
 import { LoginPage } from './pages/LoginPage';
+import { SignupPage } from './pages/SignupPage';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { NotificationCenterSidebar } from './components/NotificationCenterSidebar';
@@ -222,7 +223,7 @@ export const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
-  const isLoginRoute = location.pathname === '/login';
+  const isAuthRoute = location.pathname === '/login' || location.pathname === '/signup';
 
   const stagesList = [
     "Downloading historical market data...",
@@ -242,10 +243,11 @@ export const App: React.FC = () => {
     navigate('/');
   };
 
-  if (isLoginRoute) {
+  if (isAuthRoute) {
     return (
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignupPage />} />
       </Routes>
     );
   }

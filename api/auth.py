@@ -26,13 +26,17 @@ def verify_password(password: str, salted_hash: str) -> bool:
     return hmac.compare_digest(digest.hex(), expected_hex)
 
 
-def create_access_token(username: str) -> str:
+def create_access_token(username: str, role: str = "user") -> str:
     expire = datetime.now(timezone.utc) + timedelta(hours=settings.JWT_EXPIRY_HOURS)
-    payload = {"sub": username, "exp": expire}
+    payload = {"sub": username, "role": role, "exp": expire}
     return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+
+
+def decode_token_payload(token: str) -> dict:
+    """Returns the full claim set of a valid token, raises jwt exceptions otherwise."""
+    return jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
 
 
 def decode_access_token(token: str) -> str:
     """Returns the username encoded in a valid token, raises jwt exceptions otherwise."""
-    payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
-    return payload["sub"]
+    return decode_token_payload(token)["sub"]

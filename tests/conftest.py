@@ -9,7 +9,7 @@ directly without needing to know about login.
 from starlette.testclient import TestClient
 from api.auth import create_access_token
 
-_TEST_TOKEN = create_access_token("admin")
+_TEST_TOKEN = create_access_token("admin", role="admin")
 _original_init = TestClient.__init__
 
 

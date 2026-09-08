@@ -27,10 +27,12 @@ client.interceptors.request.use((config) => {
 client.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response && error.response.status === 401 && !error.config?.url?.includes('/auth/login')) {
+    const url = error.config?.url || '';
+    if (error.response && error.response.status === 401 && !url.includes('/auth/login') && !url.includes('/auth/signup')) {
       localStorage.removeItem(TOKEN_KEY);
       localStorage.removeItem('stonks_auth_username');
-      if (!window.location.pathname.startsWith('/login')) {
+      localStorage.removeItem('stonks_auth_role');
+      if (!window.location.pathname.startsWith('/login') && !window.location.pathname.startsWith('/signup')) {
         window.location.href = '/login';
       }
     }
@@ -47,9 +49,28 @@ export const apiService = {
     return response.data;
   },
 
-  async login(username: string, password: string): Promise<{ access_token: string; username: string }> {
+  async login(username: string, password: string): Promise<{ access_token: string; username: string; role: string }> {
     const response = await client.post('/auth/login', { username, password });
     return response.data;
+  },
+
+  async signup(inviteCode: string, username: string, password: string): Promise<{ access_token: string; username: string; role: string }> {
+    const response = await client.post('/auth/signup', { invite_code: inviteCode, username, password });
+    return response.data;
+  },
+
+  async createInvite(): Promise<{ code: string }> {
+    const response = await client.post('/auth/invites');
+    return response.data;
+  },
+
+  async listInvites(): Promise<Array<{ code: string; created_by: string; created_at: string; used: boolean; used_by: string | null }>> {
+    const response = await client.get('/auth/invites');
+    return response.data;
+  },
+
+  async revokeInvite(code: string): Promise<void> {
+    await client.delete(`/auth/invites/${code}`);
   },
 
   /**

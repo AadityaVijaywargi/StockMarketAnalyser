@@ -20,6 +20,7 @@ storage/market/
 storage/news/
 storage/reports/
 storage/test_uncached/
+storage/users.json
 
 # Frontend
 frontend/node_modules/

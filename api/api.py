@@ -7,7 +7,7 @@ from api.exceptions import PlatformException, platform_exception_handler, generi
 import jwt
 
 # Paths reachable without a login session
-PUBLIC_PATHS = {"/", "/health", "/auth/login", "/docs", "/openapi.json", "/redoc"}
+PUBLIC_PATHS = {"/", "/health", "/auth/login", "/auth/signup", "/docs", "/openapi.json", "/redoc"}
 
 def create_app() -> FastAPI:
     """
@@ -29,6 +29,18 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
+    def _unauthenticated(request: Request, detail: str) -> JSONResponse:
+        # This middleware sits outside CORSMiddleware, so a response returned
+        # here without calling call_next() never passes through it and would
+        # otherwise arrive at the browser with no CORS headers — which surfaces
+        # to the frontend as an opaque "CORS policy" network error instead of a
+        # readable 401, breaking the auto-redirect-to-login on session expiry.
+        origin = request.headers.get("origin")
+        headers = {"Access-Control-Allow-Origin": origin} if origin else {}
+        if origin:
+            headers["Vary"] = "Origin"
+        return JSONResponse(status_code=401, content={"detail": detail}, headers=headers)
+
     @app.middleware("http")
     async def require_login_session(request: Request, call_next):
         if request.method == "OPTIONS" or request.url.path in PUBLIC_PATHS:
@@ -37,11 +49,11 @@ def create_app() -> FastAPI:
         auth_header = request.headers.get("Authorization", "")
         token = auth_header[len("Bearer "):] if auth_header.startswith("Bearer ") else None
         if not token:
-            return JSONResponse(status_code=401, content={"detail": "Not authenticated"})
+            return _unauthenticated(request, "Not authenticated")
         try:
             decode_access_token(token)
         except jwt.PyJWTError:
-            return JSONResponse(status_code=401, content={"detail": "Invalid or expired session"})
+            return _unauthenticated(request, "Invalid or expired session")
 
         return await call_next(request)
 
