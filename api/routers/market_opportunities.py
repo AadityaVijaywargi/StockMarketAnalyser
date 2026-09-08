@@ -2,6 +2,7 @@ import time
 import logging
 import json
 import os
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 from fastapi import APIRouter, Depends, Query
@@ -143,75 +144,86 @@ def get_top_opportunities(
     scanned_count = 0
     opportunity_cards = []
 
-    for item in catalog:
+    def _scan_one(item: Dict[str, Any]) -> Optional[TopOpportunityCard]:
         ticker = item["ticker"]
         company_name = item.get("name", ticker)
-        
+
+        # Execute pipeline (pulls from 24h file cache or downloads)
+        report = _run_deterministic_pipeline(
+            ticker=ticker,
+            downloader=downloader,
+            cache=cache,
+            live_cache=live_cache,
+            report_generator=report_generator,
+            feature_store=feature_store,
+            scorer=scorer,
+            market_downloader=market_downloader,
+            interval="1d"
+        )
+
+        # Extract key details from report output
+        scores = report["scores"]
+        ai_report = report.get("ai_research_report", {}) or {}
+        m_context = report.get("market_context", {}) or {}
+
+        # Fetch or fallback live quote safely
         try:
-            # Execute pipeline (pulls from 24h file cache or downloads)
-            report = _run_deterministic_pipeline(
-                ticker=ticker,
-                downloader=downloader,
-                cache=cache,
-                live_cache=live_cache,
-                report_generator=report_generator,
-                feature_store=feature_store,
-                scorer=scorer,
-                market_downloader=market_downloader,
-                interval="1d"
-            )
+            quote = fetch_live_quote(ticker, live_cache)
+        except Exception:
+            chart_closes = report.get("chart_data", {}).get("close", [])
+            current_p = chart_closes[-1] if chart_closes else 0.0
+            quote = {"price": current_p, "change_pct": 0.0}
 
-            scanned_count += 1
-            
-            # Extract key details from report output
-            scores = report["scores"]
-            ai_report = report.get("ai_research_report", {}) or {}
-            m_context = report.get("market_context", {}) or {}
+        # Key Highlights (Extract up to 3 short bullet points)
+        bullish_factors = [f.get("title", "") for f in ai_report.get("bullish_factors", [])] if isinstance(ai_report, dict) else []
+        bearish_factors = [f.get("title", "") for f in ai_report.get("bearish_factors", [])] if isinstance(ai_report, dict) else []
 
-            # Fetch or fallback live quote safely
+        highlights = []
+        if scores["trend"]["value"] > 60:
+            highlights.append("Solid uptrend structure")
+        if scores["volume"]["value"] > 60:
+            highlights.append("Institutional accumulation")
+        if scores["sector"]["value"] > 60:
+            highlights.append("Outperforming Nifty 50")
+        if not highlights:
+            highlights = [f[:40] for f in bullish_factors[:2]] if bullish_factors else ["Consolidating structure"]
+
+        sector_name = m_context.get("sector", {}).get("sector_name", "General Market")
+
+        return TopOpportunityCard(
+            ticker=report["ticker"],
+            company_name=company_name,
+            current_price=quote["price"],
+            price_change_pct=quote["change_pct"],
+            overall_score=scores["overall_score"],
+            recommendation=scores["recommendation"],
+            confidence=scores["confidence"],
+            trend_direction="BULLISH" if scores["trend"]["value"] >= 50 else "BEARISH",
+            sector=sector_name,
+            top_bullish_factors=bullish_factors[:3],
+            top_bearish_factors=bearish_factors[:2],
+            key_highlights=highlights[:3]
+        )
+
+    # Scanning the catalog sequentially (one full analysis pipeline call per
+    # stock - data download, indicators, patterns, prediction, and a news/
+    # intelligence fetch with its own multi-second timeout) reliably took
+    # long enough to exceed the platform's request timeout in production,
+    # so this endpoint effectively never completed. Running the catalog
+    # concurrently cuts wall-clock time by roughly the worker count since
+    # each stock's work is independent (different tickers, so no shared
+    # per-ticker cache file contention).
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        future_to_ticker = {executor.submit(_scan_one, item): item["ticker"] for item in catalog}
+        for future in as_completed(future_to_ticker):
+            ticker = future_to_ticker[future]
             try:
-                quote = fetch_live_quote(ticker, live_cache)
-            except Exception:
-                chart_closes = report.get("chart_data", {}).get("close", [])
-                current_p = chart_closes[-1] if chart_closes else 0.0
-                quote = {"price": current_p, "change_pct": 0.0}
-
-            # Key Highlights (Extract up to 3 short bullet points)
-            bullish_factors = [f.get("title", "") for f in ai_report.get("bullish_factors", [])] if isinstance(ai_report, dict) else []
-            bearish_factors = [f.get("title", "") for f in ai_report.get("bearish_factors", [])] if isinstance(ai_report, dict) else []
-            
-            highlights = []
-            if scores["trend"]["value"] > 60:
-                highlights.append("Solid uptrend structure")
-            if scores["volume"]["value"] > 60:
-                highlights.append("Institutional accumulation")
-            if scores["sector"]["value"] > 60:
-                highlights.append("Outperforming Nifty 50")
-            if not highlights:
-                highlights = [f[:40] for f in bullish_factors[:2]] if bullish_factors else ["Consolidating structure"]
-
-            sector_symbol = m_context.get("sector", {}).get("sector_symbol", "")
-            sector_name = m_context.get("sector", {}).get("sector_name", "General Market")
-
-            card = TopOpportunityCard(
-                ticker=report["ticker"],
-                company_name=company_name,
-                current_price=quote["price"],
-                price_change_pct=quote["change_pct"],
-                overall_score=scores["overall_score"],
-                recommendation=scores["recommendation"],
-                confidence=scores["confidence"],
-                trend_direction="BULLISH" if scores["trend"]["value"] >= 50 else "BEARISH",
-                sector=sector_name,
-                top_bullish_factors=bullish_factors[:3],
-                top_bearish_factors=bearish_factors[:2],
-                key_highlights=highlights[:3]
-            )
-            opportunity_cards.append(card)
-
-        except Exception as e:
-            logger.warning(f"Skipping {ticker} during opportunities scan: {e}")
-            continue
+                card = future.result()
+                scanned_count += 1
+                if card is not None:
+                    opportunity_cards.append(card)
+            except Exception as e:
+                logger.warning(f"Skipping {ticker} during opportunities scan: {e}")
 
     # 2. Sort opportunities descending by overall score
     opportunity_cards.sort(key=lambda c: c.overall_score, reverse=True)
