@@ -316,7 +316,16 @@ def _run_deterministic_pipeline(
     # Compute and enrich Candlestick patterns
     candle_df = calculate_all_candlestick_patterns(enriched_df)
     enriched_df = feature_store.enrich_features(processed_ticker, candle_df, stage_name="candlesticks")
-    
+
+    # The Feature Store persists an incrementally outer-joined history per ticker,
+    # so a stale/ghost row from an earlier session (e.g. a synthetic future date
+    # with no real OHLCV, left over from test data) can linger in the index
+    # indefinitely and get picked up by every downstream `.iloc[-1]` "current
+    # row" lookup (scoring, prediction) even though it has no real Close price -
+    # silently NaN-ing out entire score categories. Drop any row without a
+    # valid Close before this dataframe is used for anything.
+    enriched_df = enriched_df[enriched_df["Close"].notna()]
+
     timings["features_time_ms"] = round((time.time() - t_feat) * 1000, 2)
 
     # Step 3: Algorithmic Pattern detection
