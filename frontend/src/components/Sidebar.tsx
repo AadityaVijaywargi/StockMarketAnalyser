@@ -1,13 +1,15 @@
-import React from 'react';
-import { 
-  LayoutDashboard, 
-  TrendingUp, 
-  Globe, 
-  Star, 
-  Briefcase, 
-  Play, 
-  Settings, 
-  Search
+import React, { useEffect, useState } from 'react';
+import {
+  LayoutDashboard,
+  TrendingUp,
+  Globe,
+  Star,
+  Briefcase,
+  Play,
+  Settings,
+  Search,
+  Menu,
+  X
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 
@@ -17,6 +19,13 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ onSearchClick }) => {
   const location = useLocation();
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
+
+  // Close the off-canvas drawer on every navigation (mobile only - harmless
+  // no-op on desktop where the drawer classes never apply).
+  useEffect(() => {
+    setIsMobileOpen(false);
+  }, [location.pathname]);
 
   // Find the last searched stock or default to RELIANCE.NS
   const lastStock = (() => {
@@ -43,9 +52,40 @@ export const Sidebar: React.FC<SidebarProps> = ({ onSearchClick }) => {
   ];
 
   return (
-    <aside className="w-64 bg-surface border-r border-borderDark flex flex-col justify-between h-screen sticky top-0">
+    <>
+      {/* Mobile menu trigger - only shown when the drawer is closed on small screens */}
+      <button
+        onClick={() => setIsMobileOpen(true)}
+        aria-label="Open navigation menu"
+        className={`lg:hidden fixed top-4 left-4 z-50 w-10 h-10 rounded-xl bg-surface border border-borderDark flex items-center justify-center text-white shadow-lg transition-opacity ${
+          isMobileOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'
+        }`}
+      >
+        <Menu className="w-5 h-5" />
+      </button>
+
+      {/* Backdrop, mobile only, while the drawer is open */}
+      {isMobileOpen && (
+        <div
+          onClick={() => setIsMobileOpen(false)}
+          className="lg:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
+        />
+      )}
+
+      <aside
+        className={`w-64 bg-surface border-r border-borderDark flex flex-col justify-between h-screen fixed top-0 left-0 z-50 transition-transform duration-300 ease-in-out lg:sticky lg:translate-x-0 ${
+          isMobileOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
       <div className="flex flex-col">
         {/* Logo/Branding Section */}
+        <button
+          onClick={() => setIsMobileOpen(false)}
+          aria-label="Close navigation menu"
+          className="lg:hidden absolute top-4 right-4 w-8 h-8 rounded-lg hover:bg-white/[0.05] flex items-center justify-center text-textMuted hover:text-white"
+        >
+          <X className="w-4.5 h-4.5" />
+        </button>
         <Link
           to="/"
           onClick={onSearchClick}
@@ -114,6 +154,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onSearchClick }) => {
         </div>
         <div>v1.0.0 (Deterministic)</div>
       </div>
-    </aside>
+      </aside>
+    </>
   );
 };
