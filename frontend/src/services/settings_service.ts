@@ -52,6 +52,7 @@ class SettingsService {
       'app_notifications',
       'watchlist_recommendation_state',
       'recent_searches',
+      'stonks_price_alerts',
     ];
     keysToRemove.forEach(k => localStorage.removeItem(k));
     window.dispatchEvent(new Event(SETTINGS_UPDATED_EVENT));

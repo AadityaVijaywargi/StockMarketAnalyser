@@ -438,7 +438,10 @@ export class TradeStorageService {
     const avgGain = wins.length > 0 ? Number((totalGain / wins.length).toFixed(2)) : 0;
     const avgLoss = losses.length > 0 ? Number((totalLoss / losses.length).toFixed(2)) : 0;
 
-    const overallRR = avgLoss > 0 ? Number((avgGain / avgLoss).toFixed(2)) : avgGain > 0 ? avgGain : 1.0;
+    // Same issue as aiAccuracy above: fell back to a fake 1.0 ("1:1") ratio
+    // with zero completed trades, instead of reflecting that there's simply
+    // no data yet.
+    const overallRR = totalTrades === 0 ? 0 : avgLoss > 0 ? Number((avgGain / avgLoss).toFixed(2)) : avgGain > 0 ? avgGain : 0;
 
     const totalRealizedPnl = Number(completed.reduce((sum, t) => sum + t.profit_amount, 0).toFixed(2));
 
@@ -453,7 +456,10 @@ export class TradeStorageService {
       return (isBullishSignal && isProfitable) || (!isBullishSignal && !isProfitable);
     });
 
-    const aiAccuracy = totalTrades > 0 ? Number(((accurateAiTrades.length / totalTrades) * 100).toFixed(1)) : 88.5;
+    // Was defaulting to a hardcoded 88.5% when there's no trade history at
+    // all, displaying a fabricated "AI accuracy" stat on a brand new
+    // portfolio with zero trades - should read 0 like every other stat here.
+    const aiAccuracy = totalTrades > 0 ? Number(((accurateAiTrades.length / totalTrades) * 100).toFixed(1)) : 0;
 
     const totalMins = completed.reduce((sum, t) => sum + (t.holding_time_mins || 1), 0);
     const avgMins = totalTrades > 0 ? Math.floor(totalMins / totalTrades) : 0;

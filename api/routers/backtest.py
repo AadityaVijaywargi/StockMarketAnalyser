@@ -14,6 +14,10 @@ from backtesting.engine import BacktestEngine
 
 router = APIRouter(prefix="/backtest", tags=["Backtesting"])
 
+# Approximate trading-day counts per requested period, used to decide whether
+# cached data actually satisfies the request (see run_backtest below).
+_PERIOD_MIN_BARS = {"1y": 240, "2y": 480, "5y": 1200, "max": 250}
+
 
 class BacktestRequest(BaseModel):
     ticker: str
@@ -34,8 +38,14 @@ async def run_backtest(
     processed_ticker = TickerNormalizer.normalize(request.ticker)
     period = request.period if request.period in ("1y", "2y", "5y", "max") else "5y"
 
+    # The cache key is just (ticker, interval) - it has no notion of period.
+    # A flat "at least 250 bars" check would happily reuse data cached from
+    # an unrelated ~1y fetch elsewhere in the app for a "5y" backtest
+    # request, silently running the simulation on a fraction of the history
+    # the user actually selected. Require enough bars for the period asked.
+    min_bars_required = _PERIOD_MIN_BARS.get(period, 250)
     stock_df = cache.get(processed_ticker, interval="1d")
-    if stock_df is None or len(stock_df) < 250:
+    if stock_df is None or len(stock_df) < min_bars_required:
         stock_df = downloader.download_ticker_data(processed_ticker, interval="1d", period=period)
         if stock_df is not None:
             cache.set(processed_ticker, stock_df, interval="1d")

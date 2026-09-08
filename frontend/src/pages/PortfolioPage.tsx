@@ -51,6 +51,10 @@ export const PortfolioPage: React.FC = () => {
     link.href = url;
     link.download = `STONKS_Trade_Management_Report_${new Date().toISOString().slice(0, 10)}.csv`;
     link.click();
+    // createObjectURL leaks memory until explicitly revoked - it was never
+    // being released, so every export accumulated another live blob for
+    // the rest of the page's lifetime.
+    URL.revokeObjectURL(url);
   };
 
   const filterTrades = (list: TrackedTrade[]) => {
