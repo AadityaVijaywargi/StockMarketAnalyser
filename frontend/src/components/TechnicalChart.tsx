@@ -6,7 +6,8 @@ import { apiService } from '../services/api';
 import {
   Loader2, AlertCircle, RefreshCw, SlidersHorizontal,
   Camera, Zap, Target, ShieldAlert, Crosshair, TrendingUp,
-  BarChart2, Activity, Layers, Trash2, Eye, EyeOff, Bookmark, Maximize2
+  BarChart2, Activity, Layers, Trash2, Eye, EyeOff, Bookmark, Maximize2,
+  ZoomIn, ZoomOut, Scan
 } from 'lucide-react';
 import {
   calculateEMA, calculateSMA, calculateRSI, calculateMACD, 
@@ -31,6 +32,14 @@ interface TechnicalChartProps {
    * size (340/440 depending on subpanes) when omitted - pass a larger
    * value for a dedicated full-page chart workspace. */
   mainHeight?: number;
+  /** Whether hovering the chart and using the mouse wheel zooms it.
+   * Defaults to true. Set false when the chart is embedded as one card
+   * among others on a long scrolling page - otherwise a user trying to
+   * scroll past the chart gets their scroll captured and the chart
+   * zooms instead of the page scrolling (confirmed via direct testing:
+   * page scrollY stays frozen the entire time the cursor is over the
+   * chart). Visible zoom +/-/reset buttons remain available either way. */
+  wheelZoomEnabled?: boolean;
 }
 
 interface EnabledIndicators {
@@ -72,7 +81,8 @@ export const TechnicalChart: React.FC<TechnicalChartProps> = ({
   prediction,
   activeTimeframe: propActiveTimeframe,
   onTimeframeChange,
-  mainHeight
+  mainHeight,
+  wheelZoomEnabled = true
 }) => {
   const location = useLocation();
   const isOnDedicatedChartPage = location.pathname.startsWith('/chart/');
@@ -252,6 +262,27 @@ export const TechnicalChart: React.FC<TechnicalChartProps> = ({
     }
   };
 
+  // Explicit, visible zoom controls - not just an undiscoverable scroll-wheel
+  // or double-click gesture. Directly adjusts the existing chart's bar
+  // spacing rather than rebuilding anything.
+  const handleZoomIn = () => {
+    const ts = mainChartRef.current?.timeScale();
+    if (!ts) return;
+    const current = ts.options().barSpacing ?? 6;
+    ts.applyOptions({ barSpacing: Math.min(current * 1.4, 200) });
+  };
+  const handleZoomOut = () => {
+    const ts = mainChartRef.current?.timeScale();
+    if (!ts) return;
+    const current = ts.options().barSpacing ?? 6;
+    ts.applyOptions({ barSpacing: Math.max(current / 1.4, 0.5) });
+  };
+  const handleResetZoom = () => {
+    if (!mainChartRef.current) return;
+    mainChartRef.current.priceScale('right').applyOptions({ autoScale: true });
+    mainChartRef.current.timeScale().fitContent();
+  };
+
   // Live-Quote Data Sync: patches only the trailing bar in place when a quote
   // poll updates the current candle, instead of tearing down and rebuilding
   // all 3 chart panes every few seconds (which caused visible flicker/blanking).
@@ -336,14 +367,25 @@ export const TechnicalChart: React.FC<TechnicalChartProps> = ({
         autoScale: true,
         scaleMargins: { top: 0.1, bottom: 0.2 },
       },
-      timeScale: { 
-        borderColor: '#1e293b', 
+      timeScale: {
+        borderColor: '#1e293b',
         timeVisible: true,
         secondsVisible: false,
         barSpacing: tfConfig.barSpacing,
         minBarSpacing: 0.5,
         rightOffset: 12,
         tickMarkFormatter: (time: any) => TimeframeManager.formatTickMark(time, activeTimeframe),
+      },
+      handleScroll: {
+        mouseWheel: wheelZoomEnabled,
+        pressedMouseMove: true,
+        horzTouchDrag: true,
+        vertTouchDrag: false,
+      },
+      handleScale: {
+        mouseWheel: wheelZoomEnabled,
+        pinch: true,
+        axisPressedMouseMove: true,
       },
     });
     mainChartRef.current = mainChart;
@@ -722,7 +764,7 @@ export const TechnicalChart: React.FC<TechnicalChartProps> = ({
     // currentChartData intentionally excluded: trailing-bar updates from quote
     // polling are handled by the data-sync effect above without a full rebuild.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ticker, activeTimeframe, chartDataSignature, indicators, chartStyle, showAiOverlays, showEventMarkers, drawings, activeDrawingTool, mainHeight]);
+  }, [ticker, activeTimeframe, chartDataSignature, indicators, chartStyle, showAiOverlays, showEventMarkers, drawings, activeDrawingTool, mainHeight, wheelZoomEnabled]);
 
   return (
     <div className="bg-surface border border-borderDark p-5 rounded-2xl flex flex-col gap-4 font-sans shadow-xl">
@@ -779,6 +821,31 @@ export const TechnicalChart: React.FC<TechnicalChartProps> = ({
             <ShieldAlert className="w-3.5 h-3.5" />
             <span>Diagnostics</span>
           </button>
+
+          {/* Explicit Zoom Controls - discoverable regardless of wheel-zoom setting */}
+          <div className="flex items-center bg-background border border-borderDark/80 p-1 rounded-xl gap-0.5">
+            <button
+              onClick={handleZoomOut}
+              className="p-1.5 rounded-lg text-textMuted hover:text-white hover:bg-white/[0.06] transition-all"
+              title="Zoom out"
+            >
+              <ZoomOut className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={handleResetZoom}
+              className="p-1.5 rounded-lg text-textMuted hover:text-white hover:bg-white/[0.06] transition-all"
+              title="Reset zoom to fit all data"
+            >
+              <Scan className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={handleZoomIn}
+              className="p-1.5 rounded-lg text-textMuted hover:text-white hover:bg-white/[0.06] transition-all"
+              title="Zoom in"
+            >
+              <ZoomIn className="w-3.5 h-3.5" />
+            </button>
+          </div>
 
           {/* Export PNG Snapshot Button */}
           <button

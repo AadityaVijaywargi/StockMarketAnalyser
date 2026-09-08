@@ -278,11 +278,12 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         </div>
 
         <div className="w-full">
-          <TechnicalChart 
-            chartData={activeReport.chart_data} 
-            ticker={activeReport.ticker} 
+          <TechnicalChart
+            chartData={activeReport.chart_data}
+            ticker={activeReport.ticker}
             activeTimeframe={activeTimeframe}
             onTimeframeChange={handleTimeframeChange}
+            wheelZoomEnabled={false}
           />
         </div>
 
