@@ -83,11 +83,31 @@ export const TechnicalChart: React.FC<TechnicalChartProps> = ({
   const [chartStyle, setChartStyle] = useState<ChartStyle>('candlestick');
   const [currentChartData, setCurrentChartData] = useState<ChartData>(propChartData);
 
+  // Identifies genuinely different data (a timeframe/ticker switch bringing a
+  // new date range) vs. a same-length polling tick that only mutates the
+  // trailing bar's OHLCV values. Only the former should trigger a full chart
+  // rebuild; using the currentChartData object reference directly would rerun
+  // the structural effect on every poll (that's what caused the flicker this
+  // was split out to fix), but leaving it out entirely means a timeframe
+  // switch's freshly-fetched data never rebuilds the chart at all - it's
+  // silently dropped because the switch's stale-data first pass already tore
+  // the chart down and the trailing-bar patch effect requires an existing
+  // chart to patch.
+  const chartDataSignature = `${currentChartData?.dates?.length ?? 0}_${currentChartData?.dates?.[0] ?? ''}_${currentChartData?.dates?.[currentChartData.dates.length - 1] ?? ''}`;
+
   useEffect(() => {
-    if (propChartData && propChartData.dates && propChartData.dates.length > 0) {
+    // propChartData is always the parent's daily ("1D") analysis payload - it
+    // gets a new object reference on every live-quote poll tick regardless of
+    // what timeframe the user actually has selected here. Only sync it in
+    // while 1D is genuinely the active view; otherwise a poll tick would
+    // silently clobber a user-selected intraday timeframe's fetched data with
+    // mismatched daily data (wrong length/shape for that timeframe's
+    // isIntraday setting), leaving the chart blank after a switch.
+    if (propChartData && propChartData.dates && propChartData.dates.length > 0 && activeTimeframe === '1D') {
       setCurrentChartData(propChartData);
     }
-  }, [propChartData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [propChartData, activeTimeframe]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -615,7 +635,7 @@ export const TechnicalChart: React.FC<TechnicalChartProps> = ({
     // currentChartData intentionally excluded: trailing-bar updates from quote
     // polling are handled by the data-sync effect above without a full rebuild.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ticker, activeTimeframe, indicators, chartStyle, showAiOverlays, showEventMarkers, drawings, activeDrawingTool]);
+  }, [ticker, activeTimeframe, chartDataSignature, indicators, chartStyle, showAiOverlays, showEventMarkers, drawings, activeDrawingTool]);
 
   return (
     <div className="bg-surface border border-borderDark p-5 rounded-2xl flex flex-col gap-4 font-sans shadow-xl">
