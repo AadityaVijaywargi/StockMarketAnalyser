@@ -1,6 +1,7 @@
 import { StorageProvider } from './storage_provider';
 import { LocalStorageProvider } from './local_storage_provider';
 import { AppNotification, NotificationSeverity, DeterministicAnalysisReport } from '../types';
+import { settingsService } from './settings_service';
 
 export const NOTIFICATIONS_UPDATED_EVENT = 'stonks_notifications_updated';
 
@@ -164,6 +165,8 @@ export class NotificationService {
 
   checkAndNotify(report: DeterministicAnalysisReport, isWatched: boolean): void {
     if (!report || !report.ticker || !isWatched) return;
+    const prefs = settingsService.getSettings();
+    if (!prefs.notificationsEnabled) return;
 
     const cleanTicker = report.ticker.toUpperCase().trim();
     const stateMap = this.getKnownStateMap();
@@ -196,10 +199,10 @@ export class NotificationService {
     }
 
     const currentNotifs = this.getNotifications();
-    const recChanged = prevState.recommendation !== newRec;
-    const confShifted = Math.abs(prevState.confidence - newConf) >= 10.0;
-    const targetShifted = prevState.targetPrice && newTarget ? (Math.abs(newTarget - prevState.targetPrice) / prevState.targetPrice >= 0.03) : false;
-    const stopShifted = prevState.stopLoss && newStop ? (Math.abs(newStop - prevState.stopLoss) / prevState.stopLoss >= 0.03) : false;
+    const recChanged = prefs.notifyOnRecommendationChange && prevState.recommendation !== newRec;
+    const confShifted = prefs.notifyOnRecommendationChange && Math.abs(prevState.confidence - newConf) >= 10.0;
+    const targetShifted = prefs.notifyOnTargetStopShift && prevState.targetPrice && newTarget ? (Math.abs(newTarget - prevState.targetPrice) / prevState.targetPrice >= 0.03) : false;
+    const stopShifted = prefs.notifyOnTargetStopShift && prevState.stopLoss && newStop ? (Math.abs(newStop - prevState.stopLoss) / prevState.stopLoss >= 0.03) : false;
 
     if (recChanged || confShifted || targetShifted || stopShifted) {
       const oldRec = prevState.recommendation;

@@ -491,6 +491,39 @@ export interface TrackedTrade {
   exit_signal?: string;
 }
 
+export interface BacktestTrade {
+  entry_date: string;
+  exit_date: string;
+  entry_price: number;
+  exit_price: number;
+  pnl_pct: number;
+  exit_reason: string;
+}
+
+export interface BacktestMetrics {
+  final_value: number;
+  total_return_pct: number;
+  cagr_pct: number;
+  max_drawdown_pct: number;
+  sharpe_ratio: number;
+  total_trades: number;
+  win_rate_pct: number;
+  avg_win_pct: number;
+  avg_loss_pct: number;
+}
+
+export interface BacktestResult {
+  ticker: string;
+  period: string;
+  bars_simulated: number;
+  strategy_name: string;
+  initial_capital: number;
+  equity_curve: { date: string; value: number }[];
+  trades: BacktestTrade[];
+  open_position: { entry_date: string; entry_price: number; unrealized_pnl_pct: number } | null;
+  metrics: BacktestMetrics;
+}
+
 export interface TradePerformanceSummary {
   total_trades: number;
   active_trades: number;

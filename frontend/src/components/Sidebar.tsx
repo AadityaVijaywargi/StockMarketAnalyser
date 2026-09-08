@@ -38,8 +38,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ onSearchClick }) => {
     { name: 'Watchlist', path: '/watchlist', icon: Star },
     { name: 'Market Overview', path: '/market', icon: Globe },
     { name: 'Portfolio', path: '/portfolio', icon: Briefcase },
-    { name: 'Backtesting', path: '#', icon: Play, disabled: true, tag: 'SOON' },
-    { name: 'Settings', path: '#', icon: Settings, disabled: true },
+    { name: 'Backtesting', path: '/backtesting', icon: Play },
+    { name: 'Settings', path: '/settings', icon: Settings },
   ];
 
   return (
@@ -71,25 +71,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ onSearchClick }) => {
               : item.path !== '/' && item.path !== '#' && location.pathname.startsWith(item.path);
             const isHomeActive = item.path === '/' && location.pathname === '/';
             
-            if (item.disabled) {
-              return (
-                <div 
-                  key={idx} 
-                  className="flex items-center justify-between p-3 rounded-lg text-textMuted cursor-not-allowed hover:bg-white/[0.02] transition-all text-sm"
-                >
-                  <div className="flex items-center gap-3">
-                    <Icon className="w-4 h-4" />
-                    <span>{item.name}</span>
-                  </div>
-                  {item.tag && (
-                    <span className="text-[9px] bg-white/10 text-white font-mono px-1.5 py-0.5 rounded tracking-wider">
-                      {item.tag}
-                    </span>
-                  )}
-                </div>
-              );
-            }
-
             if (item.action) {
               return (
                 <button

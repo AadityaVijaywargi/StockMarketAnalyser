@@ -5,6 +5,8 @@ import { DashboardPage } from './pages/DashboardPage';
 import { WatchlistPage } from './pages/WatchlistPage';
 import { MarketOverviewPage } from './pages/MarketOverviewPage';
 import { PortfolioPage } from './pages/PortfolioPage';
+import { BacktestingPage } from './pages/BacktestingPage';
+import { SettingsPage } from './pages/SettingsPage';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { NotificationCenterSidebar } from './components/NotificationCenterSidebar';
 import { apiService } from './services/api';
@@ -305,9 +307,17 @@ export const App: React.FC = () => {
               />
             } 
           />
-          <Route 
-            path="/portfolio" 
-            element={<PortfolioPage />} 
+          <Route
+            path="/portfolio"
+            element={<PortfolioPage />}
+          />
+          <Route
+            path="/backtesting"
+            element={<BacktestingPage />}
+          />
+          <Route
+            path="/settings"
+            element={<SettingsPage />}
           />
           {/* Catch-all fallback redirect */}
           <Route path="*" element={<Navigate to="/" replace />} />

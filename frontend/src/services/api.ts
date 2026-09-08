@@ -1,12 +1,12 @@
 import axios from 'axios';
-import { DeterministicAnalysisReport, LiveQuote, PredictionHorizon, PredictionResult, TopOpportunitiesResponse, TradeSignal } from '../types';
+import { DeterministicAnalysisReport, LiveQuote, PredictionHorizon, PredictionResult, TopOpportunitiesResponse, TradeSignal, BacktestResult } from '../types';
 
 export type RecommendationRefresh = Pick<
   DeterministicAnalysisReport,
   'scores' | 'risk_profile' | 'positive_factors' | 'negative_factors' | 'neutral_factors'
 >;
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8001';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8002';
 
 const client = axios.create({
   baseURL: API_BASE_URL,
@@ -142,6 +142,17 @@ export const apiService = {
   async getMarketOverview(forceRefresh: boolean = false) {
     const response = await client.get('/market/overview', {
       params: { force_refresh: forceRefresh }
+    });
+    return response.data;
+  },
+
+  /**
+   * Runs a historical strategy simulation for a ticker and returns the
+   * equity curve, trade log, and summary performance metrics.
+   */
+  async runBacktest(ticker: string, period: string = '5y', initialCapital: number = 100000): Promise<BacktestResult> {
+    const response = await client.post<BacktestResult>('/backtest/run', {
+      ticker, period, initial_capital: initialCapital
     });
     return response.data;
   },
