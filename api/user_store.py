@@ -50,11 +50,12 @@ def get_user(username: str) -> Optional[Dict[str, Any]]:
         return _load()["users"].get(username)
 
 
-def create_invite(created_by: str) -> str:
+def create_invite(created_by: str, email: str) -> str:
     code = secrets.token_urlsafe(9)
     with _LOCK:
         data = _load()
         data["invites"][code] = {
+            "email": email.strip().lower(),
             "created_by": created_by,
             "created_at": datetime.now(timezone.utc).isoformat(),
             "used": False,
@@ -87,8 +88,9 @@ class UsernameTakenError(Exception):
     pass
 
 
-def redeem_invite_and_create_user(invite_code: str, username: str, password_hash: str) -> None:
-    """Atomically validates the invite code and creates the user, or raises."""
+def redeem_invite_and_create_user(invite_code: str, email: str, username: str, password_hash: str) -> None:
+    """Atomically validates the invite code (and that it was issued to this
+    email) and creates the user, or raises."""
     with _LOCK:
         data = _load()
         invite = data["invites"].get(invite_code)
@@ -96,12 +98,15 @@ def redeem_invite_and_create_user(invite_code: str, username: str, password_hash
             raise InviteError("Invalid invite code")
         if invite["used"]:
             raise InviteError("This invite code has already been used")
+        if invite.get("email") and invite["email"] != email.strip().lower():
+            raise InviteError("This invite was issued to a different email address")
         if username == settings.ADMIN_USERNAME or username in data["users"]:
             raise UsernameTakenError("That username is already taken")
 
         data["users"][username] = {
             "password_hash": password_hash,
             "role": "user",
+            "email": email.strip().lower(),
             "created_at": datetime.now(timezone.utc).isoformat(),
             "invited_by": invite["created_by"],
         }

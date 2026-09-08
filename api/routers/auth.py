@@ -1,7 +1,7 @@
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, Header, HTTPException, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, EmailStr, Field
 import jwt
 
 from api.auth import create_access_token, decode_token_payload, hash_password, verify_password
@@ -25,6 +25,7 @@ class LoginResponse(BaseModel):
 
 class SignupRequest(BaseModel):
     invite_code: str
+    email: EmailStr
     # Must match api/user_data_store.py's _SAFE_NAME pattern: usernames are
     # used to build a per-user filename for cloud-synced data, so a username
     # outside this charset would sign up successfully but then hit an
@@ -33,12 +34,18 @@ class SignupRequest(BaseModel):
     password: str = Field(min_length=8)
 
 
+class InviteCreateRequest(BaseModel):
+    email: EmailStr
+
+
 class InviteResponse(BaseModel):
     code: str
+    email: str
 
 
 class InviteInfo(BaseModel):
     code: str
+    email: Optional[str] = None
     created_by: str
     created_at: str
     used: bool
@@ -82,7 +89,7 @@ async def login(payload: LoginRequest):
 async def signup(payload: SignupRequest):
     password_hash = hash_password(payload.password)
     try:
-        user_store.redeem_invite_and_create_user(payload.invite_code, payload.username, password_hash)
+        user_store.redeem_invite_and_create_user(payload.invite_code, payload.email, payload.username, password_hash)
     except user_store.InviteError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except user_store.UsernameTakenError as e:
@@ -93,9 +100,9 @@ async def signup(payload: SignupRequest):
 
 
 @router.post("/invites", response_model=InviteResponse)
-async def create_invite(admin=Depends(_require_admin)):
-    code = user_store.create_invite(created_by=admin["sub"])
-    return InviteResponse(code=code)
+async def create_invite(payload: InviteCreateRequest, admin=Depends(_require_admin)):
+    code = user_store.create_invite(created_by=admin["sub"], email=payload.email)
+    return InviteResponse(code=code, email=payload.email.lower())
 
 
 @router.get("/invites", response_model=List[InviteInfo])

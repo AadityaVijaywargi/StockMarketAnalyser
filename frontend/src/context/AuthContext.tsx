@@ -13,7 +13,7 @@ interface AuthContextType {
   role: string | null;
   isAdmin: boolean;
   login: (username: string, password: string) => Promise<void>;
-  signup: (inviteCode: string, username: string, password: string) => Promise<void>;
+  signup: (inviteCode: string, email: string, username: string, password: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -50,8 +50,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     applySession(data);
   };
 
-  const signup = async (inviteCode: string, usernameInput: string, password: string) => {
-    const data = await apiService.signup(inviteCode, usernameInput, password);
+  const signup = async (inviteCode: string, email: string, usernameInput: string, password: string) => {
+    const data = await apiService.signup(inviteCode, email, usernameInput, password);
     applySession(data);
   };
 

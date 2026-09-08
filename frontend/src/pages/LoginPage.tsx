@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Lock, Loader2, AlertCircle, TrendingUp } from 'lucide-react';
+import { Lock, Loader2, AlertCircle, TrendingUp, User, Eye, EyeOff } from 'lucide-react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { AuthLayout } from '../components/AuthLayout';
 
 export const LoginPage: React.FC = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
@@ -24,55 +26,70 @@ export const LoginPage: React.FC = () => {
       navigate(from, { replace: true });
     } catch (err: any) {
       const detail = err?.response?.data?.detail;
-      setError(detail || 'Login failed. Check your username and password.');
+      setError(typeof detail === 'string' ? detail : 'Login failed. Check your username and password.');
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen w-full bg-background relative flex items-center justify-center overflow-hidden font-sans select-none px-6">
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#141414_1px,transparent_1px),linear-gradient(to_bottom,#141414_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-70 pointer-events-none" />
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[300px] bg-brand/5 rounded-full filter blur-[120px] pointer-events-none" />
-
+    <AuthLayout>
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-        className="w-full max-w-sm bg-surface border border-borderDark rounded-2xl shadow-premium p-7 flex flex-col gap-6 relative z-10"
+        className="w-full max-w-sm bg-surface border border-borderDark rounded-2xl shadow-premium p-7 flex flex-col gap-6"
       >
-        <div className="flex flex-col items-center gap-2 text-center">
+        <div className="flex flex-col items-center gap-2 text-center lg:hidden">
           <div className="w-11 h-11 rounded-xl bg-brand/10 border border-brand/30 flex items-center justify-center">
             <TrendingUp className="w-5 h-5 text-brand" />
           </div>
           <h1 className="font-extrabold text-lg text-white font-mono tracking-tight">STONKS</h1>
-          <p className="text-xs text-textMuted">Sign in to access the research platform</p>
         </div>
+        <div className="hidden lg:block">
+          <h2 className="font-extrabold text-xl text-white tracking-tight">Welcome back</h2>
+        </div>
+        <p className="text-xs text-textMuted -mt-4 lg:-mt-2 text-center lg:text-left">Sign in to access the research platform</p>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
             <label className="text-[11px] font-semibold text-textMuted font-mono uppercase tracking-wider">Username</label>
-            <input
-              type="text"
-              value={username}
-              onChange={e => setUsername(e.target.value)}
-              autoComplete="username"
-              autoFocus
-              required
-              className="px-3.5 py-2.5 rounded-xl bg-background border border-borderDark focus:border-brand/60 outline-none text-sm text-white font-mono transition-all"
-            />
+            <div className="relative">
+              <User className="w-4 h-4 text-textMuted absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                type="text"
+                value={username}
+                onChange={e => setUsername(e.target.value)}
+                autoComplete="username"
+                autoFocus
+                required
+                className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-background border border-borderDark focus:border-brand/60 outline-none text-sm text-white font-mono transition-all"
+              />
+            </div>
           </div>
 
           <div className="flex flex-col gap-1.5">
             <label className="text-[11px] font-semibold text-textMuted font-mono uppercase tracking-wider">Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              autoComplete="current-password"
-              required
-              className="px-3.5 py-2.5 rounded-xl bg-background border border-borderDark focus:border-brand/60 outline-none text-sm text-white font-mono transition-all"
-            />
+            <div className="relative">
+              <Lock className="w-4 h-4 text-textMuted absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                autoComplete="current-password"
+                required
+                className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-background border border-borderDark focus:border-brand/60 outline-none text-sm text-white font-mono transition-all"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(s => !s)}
+                tabIndex={-1}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-textMuted hover:text-white transition-colors"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
           </div>
 
           {error && (
@@ -93,11 +110,11 @@ export const LoginPage: React.FC = () => {
         </form>
 
         <p className="text-center text-xs text-textMuted">
-          Have an invite code?{' '}
+          Invited by email?{' '}
           <Link to="/signup" className="text-brand hover:underline font-semibold">Sign up</Link>
         </p>
       </motion.div>
-    </div>
+    </AuthLayout>
   );
 };
 

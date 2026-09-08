@@ -54,17 +54,17 @@ export const apiService = {
     return response.data;
   },
 
-  async signup(inviteCode: string, username: string, password: string): Promise<{ access_token: string; username: string; role: string }> {
-    const response = await client.post('/auth/signup', { invite_code: inviteCode, username, password });
+  async signup(inviteCode: string, email: string, username: string, password: string): Promise<{ access_token: string; username: string; role: string }> {
+    const response = await client.post('/auth/signup', { invite_code: inviteCode, email, username, password });
     return response.data;
   },
 
-  async createInvite(): Promise<{ code: string }> {
-    const response = await client.post('/auth/invites');
+  async createInvite(email: string): Promise<{ code: string; email: string }> {
+    const response = await client.post('/auth/invites', { email });
     return response.data;
   },
 
-  async listInvites(): Promise<Array<{ code: string; created_by: string; created_at: string; used: boolean; used_by: string | null }>> {
+  async listInvites(): Promise<Array<{ code: string; email: string | null; created_by: string; created_at: string; used: boolean; used_by: string | null }>> {
     const response = await client.get('/auth/invites');
     return response.data;
   },
