@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowUpRight, ArrowDownRight, Clock, Star, TrendingUp } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, Clock, Star, TrendingUp, FileDown, Loader2 } from 'lucide-react';
 import { DeterministicAnalysisReport, LiveQuote, ChartData } from '../types';
 import { formatPrice, formatNumber, formatPercentage } from '../utils/formatter';
 import { SearchBar } from './search/SearchBar';
 import { useWatchlist } from '../context/WatchlistContext';
 import { apiService } from '../services/api';
+import { generateStockReportPdf } from '../services/pdf_report_service';
 
 interface DashboardHeaderProps {
   report: DeterministicAnalysisReport;
@@ -27,6 +28,16 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
 }) => {
   const { isFavorite: checkFavorite, toggleFavorite } = useWatchlist();
   const isFavorite = checkFavorite(report.ticker);
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExportPdf = async () => {
+    setIsExporting(true);
+    try {
+      generateStockReportPdf(report);
+    } finally {
+      setTimeout(() => setIsExporting(false), 400);
+    }
+  };
 
   const handleToggleFavorite = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -294,6 +305,17 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
             </span>
           </div>
         </div>
+
+        {/* Export PDF Report */}
+        <button
+          onClick={handleExportPdf}
+          disabled={isExporting}
+          title="Export PDF research report"
+          className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-surface border border-borderDark text-textMuted hover:text-white hover:border-brand/40 text-xs font-mono font-bold transition-all shrink-0 disabled:opacity-50"
+        >
+          {isExporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileDown className="w-3.5 h-3.5" />}
+          <span className="hidden sm:inline">Export PDF</span>
+        </button>
 
         {/* Reusable Header Search Bar */}
         <SearchBar
