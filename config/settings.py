@@ -66,6 +66,13 @@ class Settings(BaseSettings):
     API_HOST: str = Field(default="127.0.0.1")
     API_PORT: int = Field(default=8000)
 
+    # Authentication Settings
+    JWT_SECRET_KEY: str = Field(default="", description="Secret key used to sign login session tokens")
+    JWT_ALGORITHM: str = Field(default="HS256")
+    JWT_EXPIRY_HOURS: int = Field(default=24 * 7, description="Login session validity in hours")
+    ADMIN_USERNAME: str = Field(default="admin")
+    ADMIN_PASSWORD_HASH: str = Field(default="", description="PBKDF2 hash of the admin password, format salt$hash")
+
     def create_directories(self) -> None:
         """Helper to ensure all storage directories exist."""
         for path in [

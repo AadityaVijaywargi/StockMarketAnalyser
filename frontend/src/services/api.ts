@@ -7,6 +7,7 @@ export type RecommendationRefresh = Pick<
 >;
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8002';
+const TOKEN_KEY = 'stonks_auth_token';
 
 const client = axios.create({
   baseURL: API_BASE_URL,
@@ -15,12 +16,39 @@ const client = axios.create({
   },
 });
 
+client.interceptors.request.use((config) => {
+  const token = localStorage.getItem(TOKEN_KEY);
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+client.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401 && !error.config?.url?.includes('/auth/login')) {
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem('stonks_auth_username');
+      if (!window.location.pathname.startsWith('/login')) {
+        window.location.href = '/login';
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 export const apiService = {
   /**
    * Fetch service health status
    */
   async getHealth() {
     const response = await client.get('/health');
+    return response.data;
+  },
+
+  async login(username: string, password: string): Promise<{ access_token: string; username: string }> {
+    const response = await client.post('/auth/login', { username, password });
     return response.data;
   },
 

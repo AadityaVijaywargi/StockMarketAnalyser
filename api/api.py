@@ -1,7 +1,13 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from api.routers import health, analysis, market_opportunities, intelligence, backtest
+from fastapi.responses import JSONResponse
+from api.routers import health, analysis, market_opportunities, intelligence, backtest, auth
+from api.auth import decode_access_token
 from api.exceptions import PlatformException, platform_exception_handler, generic_exception_handler
+import jwt
+
+# Paths reachable without a login session
+PUBLIC_PATHS = {"/", "/health", "/auth/login", "/docs", "/openapi.json", "/redoc"}
 
 def create_app() -> FastAPI:
     """
@@ -13,7 +19,7 @@ def create_app() -> FastAPI:
         description="Quantitative technical analysis, macro-economic context, and explanation engine API.",
         version="1.0.0"
     )
-    
+
     # Enable Cross-Origin Resource Sharing (CORS)
     app.add_middleware(
         CORSMiddleware,
@@ -22,8 +28,25 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    
+
+    @app.middleware("http")
+    async def require_login_session(request: Request, call_next):
+        if request.method == "OPTIONS" or request.url.path in PUBLIC_PATHS:
+            return await call_next(request)
+
+        auth_header = request.headers.get("Authorization", "")
+        token = auth_header[len("Bearer "):] if auth_header.startswith("Bearer ") else None
+        if not token:
+            return JSONResponse(status_code=401, content={"detail": "Not authenticated"})
+        try:
+            decode_access_token(token)
+        except jwt.PyJWTError:
+            return JSONResponse(status_code=401, content={"detail": "Invalid or expired session"})
+
+        return await call_next(request)
+
     # Include Router Endpoints
+    app.include_router(auth.router)
     app.include_router(health.router)
     app.include_router(analysis.router)
     app.include_router(market_opportunities.router)

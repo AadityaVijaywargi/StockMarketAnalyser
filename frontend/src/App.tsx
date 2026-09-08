@@ -8,13 +8,15 @@ import { PortfolioPage } from './pages/PortfolioPage';
 import { BacktestingPage } from './pages/BacktestingPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { ChartPage } from './pages/ChartPage';
+import { LoginPage } from './pages/LoginPage';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { ProtectedRoute } from './components/ProtectedRoute';
 import { NotificationCenterSidebar } from './components/NotificationCenterSidebar';
 import { apiService } from './services/api';
 import { DeterministicAnalysisReport } from './types';
 import { Loader2, AlertCircle, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Routes, Route, useNavigate, useParams, useSearchParams, Navigate } from 'react-router-dom';
+import { Routes, Route, useNavigate, useParams, useSearchParams, useLocation, Navigate } from 'react-router-dom';
 
 const saveToRecentSearches = (ticker: string) => {
   try {
@@ -219,6 +221,8 @@ const DashboardRouteWrapper: React.FC<{
 export const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const location = useLocation();
+  const isLoginRoute = location.pathname === '/login';
 
   const stagesList = [
     "Downloading historical market data...",
@@ -237,6 +241,14 @@ export const App: React.FC = () => {
     setError(null);
     navigate('/');
   };
+
+  if (isLoginRoute) {
+    return (
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+      </Routes>
+    );
+  }
 
   return (
     <div className="flex bg-background text-white min-h-screen overflow-hidden">
@@ -271,58 +283,66 @@ export const App: React.FC = () => {
 
         {/* Page Routing */}
         <Routes>
-          <Route 
-            path="/" 
+          <Route
+            path="/"
             element={
-              <LandingPage 
-                onSearch={handleSearch} 
-                isLoading={false} 
-              />
-            } 
+              <ProtectedRoute>
+                <LandingPage
+                  onSearch={handleSearch}
+                  isLoading={false}
+                />
+              </ProtectedRoute>
+            }
           />
-          <Route 
-            path="/dashboard/:ticker" 
+          <Route
+            path="/dashboard/:ticker"
             element={
-              <DashboardRouteWrapper
-                error={error}
-                setError={setError}
-                stagesList={stagesList}
-              />
-            } 
+              <ProtectedRoute>
+                <DashboardRouteWrapper
+                  error={error}
+                  setError={setError}
+                  stagesList={stagesList}
+                />
+              </ProtectedRoute>
+            }
           />
-          <Route 
-            path="/watchlist" 
+          <Route
+            path="/watchlist"
             element={
-              <WatchlistPage 
-                onSearch={handleSearch} 
-                isLoading={false} 
-              />
-            } 
+              <ProtectedRoute>
+                <WatchlistPage
+                  onSearch={handleSearch}
+                  isLoading={false}
+                />
+              </ProtectedRoute>
+            }
           />
-          <Route 
-            path="/market" 
+          <Route
+            path="/market"
             element={
-              <MarketOverviewPage 
-                onSearch={handleSearch} 
-                isLoading={false} 
-              />
-            } 
+              <ProtectedRoute>
+                <MarketOverviewPage
+                  onSearch={handleSearch}
+                  isLoading={false}
+                />
+              </ProtectedRoute>
+            }
           />
           <Route
             path="/portfolio"
-            element={<PortfolioPage />}
+            element={<ProtectedRoute><PortfolioPage /></ProtectedRoute>}
           />
           <Route
             path="/backtesting"
-            element={<BacktestingPage />}
+            element={<ProtectedRoute><BacktestingPage /></ProtectedRoute>}
           />
           <Route
             path="/settings"
-            element={<SettingsPage />}
+            element={<ProtectedRoute><SettingsPage /></ProtectedRoute>}
           />
           <Route
             path="/chart/:ticker"
-            element={<ChartPage />}
+            element={<ProtectedRoute><ChartPage /></ProtectedRoute>}
           />
           {/* Catch-all fallback redirect */}
           <Route path="*" element={<Navigate to="/" replace />} />

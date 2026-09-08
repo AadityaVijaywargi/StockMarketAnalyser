@@ -1,11 +1,20 @@
 import React, { useState } from 'react';
-import { Settings as SettingsIcon, Bell, Target, Trash2, AlertTriangle, CheckCircle2, Info } from 'lucide-react';
+import { Settings as SettingsIcon, Bell, Target, Trash2, AlertTriangle, CheckCircle2, Info, LogOut, UserCircle2 } from 'lucide-react';
 import { settingsService, AppSettings } from '../services/settings_service';
+import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 export const SettingsPage: React.FC = () => {
   const [settings, setSettings] = useState<AppSettings>(() => settingsService.getSettings());
   const [confirmReset, setConfirmReset] = useState<boolean>(false);
   const [resetDone, setResetDone] = useState<boolean>(false);
+  const { username, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
 
   const update = (patch: Partial<AppSettings>) => {
     setSettings(settingsService.updateSettings(patch));
@@ -27,6 +36,27 @@ export const SettingsPage: React.FC = () => {
           <span>Settings</span>
         </h1>
         <p className="text-xs text-textMuted mt-1">Notification preferences and local data controls.</p>
+      </div>
+
+      {/* Account */}
+      <div className="bg-surface border border-borderDark p-5 rounded-2xl shadow-lg flex flex-col gap-4">
+        <h3 className="font-bold text-sm text-white font-mono flex items-center gap-2">
+          <UserCircle2 className="w-4 h-4 text-brand" />
+          <span>Account</span>
+        </h3>
+        <div className="flex items-center justify-between p-3 rounded-xl bg-background border border-borderDark/60">
+          <div>
+            <span className="text-sm text-slate-200 font-semibold">Signed in as {username || 'admin'}</span>
+            <p className="text-[11px] text-textMuted mt-0.5">End your current session on this device.</p>
+          </div>
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 hover:bg-rose-500/20 text-xs font-mono font-bold transition-all flex-shrink-0"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            <span>Log Out</span>
+          </button>
+        </div>
       </div>
 
       {/* Notification Preferences */}
