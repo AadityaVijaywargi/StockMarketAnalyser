@@ -135,6 +135,13 @@ export const TechnicalChart: React.FC<TechnicalChartProps> = ({
   const [showEventMarkers, setShowEventMarkers] = useState<boolean>(true);
   const [activeDrawingTool, setActiveDrawingTool] = useState<DrawingToolType>('cursor');
   const [drawings, setDrawings] = useState<DrawingObject[]>(() => getSavedDrawings(ticker));
+  // Trendline and Fibonacci both need two clicks (anchor, then finish). The
+  // click handler lives inside the chart-building effect below, which we
+  // don't want rebuilding the whole chart just to register a second click -
+  // so the anchor point is tracked via ref (read fresh on every click) with
+  // a small boolean in state purely to drive the "click to finish" hint UI.
+  const pendingPointRef = useRef<{ time: any; price: number } | null>(null);
+  const [awaitingSecondPoint, setAwaitingSecondPoint] = useState<boolean>(false);
 
   // Real-time Hover Tooltip Metrics with Change %
   const [hoverMetrics, setHoverMetrics] = useState<{
@@ -221,6 +228,12 @@ export const TechnicalChart: React.FC<TechnicalChartProps> = ({
   const handleClearDrawings = () => {
     clearDrawings(ticker);
     setDrawings([]);
+  };
+
+  const selectDrawingTool = (tool: DrawingToolType) => {
+    pendingPointRef.current = null;
+    setAwaitingSecondPoint(false);
+    setActiveDrawingTool(prev => (prev === tool ? 'cursor' : tool));
   };
 
   const exportChartSnapshot = () => {
@@ -489,6 +502,42 @@ export const TechnicalChart: React.FC<TechnicalChartProps> = ({
           axisLabelVisible: true,
           title: drw.text || `Line ₹${drw.points[0].price}`,
         });
+      } else if (drw.type === 'trendline' && drw.points && drw.points.length === 2) {
+        // lightweight-charts requires setData() points in strictly ascending,
+        // unique time order - it does NOT sort internally and throws
+        // ("Value is null") if given descending or duplicate-time points,
+        // which click order can't guarantee (the anchor click isn't
+        // necessarily the earlier bar).
+        const [a, b] = drw.points;
+        const [start, end] = a.time <= b.time ? [a, b] : [b, a];
+        if (start.time !== end.time) {
+          const trendSeries = mainChart.addLineSeries({
+            color: drw.color || '#f59e0b',
+            lineWidth: 2,
+            lineStyle: LineStyle.Solid,
+            lastValueVisible: false,
+            priceLineVisible: false,
+          });
+          trendSeries.setData([
+            { time: start.time, value: start.price },
+            { time: end.time, value: end.price },
+          ]);
+        }
+      } else if (drw.type === 'fibonacci' && drw.points && drw.points.length === 2) {
+        const [start, end] = drw.points;
+        const high = Math.max(start.price, end.price);
+        const low = Math.min(start.price, end.price);
+        const levels = calculateFibonacciLevels(high, low);
+        levels.forEach(level => {
+          mainSeries.createPriceLine({
+            price: level.price,
+            color: level.color,
+            lineWidth: 1,
+            lineStyle: LineStyle.Dashed,
+            axisLabelVisible: true,
+            title: `Fib ${level.ratio}`,
+          });
+        });
       }
     });
 
@@ -577,21 +626,50 @@ export const TechnicalChart: React.FC<TechnicalChartProps> = ({
 
     // Canvas Click Handler for Adding Drawing Tools
     mainChart.subscribeClick((param) => {
-      if (activeDrawingTool === 'horizontal' && param.point && mainSeriesRef.current) {
-        const price = mainSeriesRef.current.coordinateToPrice(param.point.y);
-        if (price) {
-          const newDrawing: DrawingObject = {
-            id: `draw_${Date.now()}`,
-            type: 'horizontal',
-            ticker,
-            points: [{ time: param.time, price: parseFloat(price.toFixed(2)) }],
-            color: '#3b82f6',
-            text: `Support/Res ₹${price.toFixed(2)}`
-          };
-          const updated = saveDrawing(ticker, newDrawing);
-          setDrawings(updated);
-          setActiveDrawingTool('cursor');
+      if (!param.point || !mainSeriesRef.current || !param.time) return;
+      const price = mainSeriesRef.current.coordinateToPrice(param.point.y);
+      if (!price) return;
+      const clickedPoint = { time: param.time, price: parseFloat(price.toFixed(2)) };
+
+      if (activeDrawingTool === 'horizontal') {
+        const newDrawing: DrawingObject = {
+          id: `draw_${Date.now()}`,
+          type: 'horizontal',
+          ticker,
+          points: [clickedPoint],
+          color: '#3b82f6',
+          text: `Support/Res ₹${clickedPoint.price}`
+        };
+        const updated = saveDrawing(ticker, newDrawing);
+        setDrawings(updated);
+        setActiveDrawingTool('cursor');
+        return;
+      }
+
+      if (activeDrawingTool === 'trendline' || activeDrawingTool === 'fibonacci') {
+        if (!pendingPointRef.current) {
+          // First click: anchor the start point, wait for the second.
+          pendingPointRef.current = clickedPoint;
+          setAwaitingSecondPoint(true);
+          return;
         }
+        // Second click: finalize the two-point drawing.
+        const startPoint = pendingPointRef.current;
+        pendingPointRef.current = null;
+        setAwaitingSecondPoint(false);
+        const newDrawing: DrawingObject = {
+          id: `draw_${Date.now()}`,
+          type: activeDrawingTool,
+          ticker,
+          points: [startPoint, clickedPoint],
+          color: activeDrawingTool === 'trendline' ? '#f59e0b' : '#a855f7',
+          text: activeDrawingTool === 'trendline'
+            ? `Trendline ₹${startPoint.price} → ₹${clickedPoint.price}`
+            : `Fibonacci ₹${startPoint.price} → ₹${clickedPoint.price}`
+        };
+        const updated = saveDrawing(ticker, newDrawing);
+        setDrawings(updated);
+        setActiveDrawingTool('cursor');
       }
     });
 
@@ -777,7 +855,7 @@ export const TechnicalChart: React.FC<TechnicalChartProps> = ({
 
           {/* Drawing Tool Actions */}
           <button
-            onClick={() => setActiveDrawingTool(activeDrawingTool === 'horizontal' ? 'cursor' : 'horizontal')}
+            onClick={() => selectDrawingTool('horizontal')}
             className={`flex items-center gap-1 px-2.5 py-1 rounded-lg border text-[11px] transition-all font-semibold ${
               activeDrawingTool === 'horizontal'
                 ? 'bg-blue-500/20 border-blue-500/50 text-blue-400'
@@ -786,8 +864,40 @@ export const TechnicalChart: React.FC<TechnicalChartProps> = ({
             title="Click on chart to add horizontal support/resistance line"
           >
             <TrendingUp className="w-3.5 h-3.5" />
-            <span>Draw Support/Res</span>
+            <span>Support/Res</span>
           </button>
+
+          <button
+            onClick={() => selectDrawingTool('trendline')}
+            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg border text-[11px] transition-all font-semibold ${
+              activeDrawingTool === 'trendline'
+                ? 'bg-amber-500/20 border-amber-500/50 text-amber-400'
+                : 'bg-background border-borderDark text-textMuted'
+            }`}
+            title="Click two points on the chart to draw a trendline"
+          >
+            <Crosshair className="w-3.5 h-3.5" />
+            <span>Trendline</span>
+          </button>
+
+          <button
+            onClick={() => selectDrawingTool('fibonacci')}
+            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg border text-[11px] transition-all font-semibold ${
+              activeDrawingTool === 'fibonacci'
+                ? 'bg-purple-500/20 border-purple-500/50 text-purple-400'
+                : 'bg-background border-borderDark text-textMuted'
+            }`}
+            title="Click a swing high then a swing low to draw Fibonacci retracement levels"
+          >
+            <Layers className="w-3.5 h-3.5" />
+            <span>Fibonacci</span>
+          </button>
+
+          {awaitingSecondPoint && (
+            <span className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[11px] font-semibold animate-pulse">
+              Click end point to finish
+            </span>
+          )}
 
           {drawings.length > 0 && (
             <button
