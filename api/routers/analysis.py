@@ -395,7 +395,16 @@ def _run_deterministic_pipeline(
     timings["scoring_time_ms"] = round((time.time() - t_score) * 1000, 2)
 
     # Step 7: Visual visualization payload
-    chart_payload = build_chart_data(enriched_df, support_zones, resistance_zones, patterns)
+    # enriched_df holds the full downloaded history (defaults to 5 years -
+    # indicators like SMA_200 need that much lookback), but the frontend's
+    # default "1D" chart tab is meant to show ~1 year and never re-fetches on
+    # initial load if it's already the selected tab (its own timeframe state
+    # already matches, so no fetch triggers) - it just renders whatever this
+    # payload contains. Without trimming, "1D" silently showed the entire
+    # multi-year history instead of ~1 year. Scoring above already used the
+    # full enriched_df, so trimming here only affects what gets charted.
+    chart_source_df = enriched_df.tail(252) if interval == "1d" else enriched_df
+    chart_payload = build_chart_data(chart_source_df, support_zones, resistance_zones, patterns)
 
     # Total pipeline runtimes
     total_time_ms = round((time.time() - t_start) * 1000, 2)
