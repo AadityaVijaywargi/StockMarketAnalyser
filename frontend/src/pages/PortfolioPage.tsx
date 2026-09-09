@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Briefcase, TrendingUp, TrendingDown, DollarSign, Download, 
-  Search, ShieldAlert, Award, ArrowUpRight, ArrowDownRight, 
+import React, { useState, useEffect, useRef } from 'react';
+import { createChart, ColorType, IChartApi } from 'lightweight-charts';
+import {
+  Briefcase, TrendingUp, TrendingDown, DollarSign, Download,
+  Search, ShieldAlert, Award, ArrowUpRight, ArrowDownRight,
   Trash2, X, RefreshCw, Layers, CheckCircle2, Clock, Activity, Zap
 } from 'lucide-react';
 import { tradeStorageService, TRADE_STORAGE_UPDATED_EVENT } from '../services/trade_storage_service';
@@ -13,6 +14,8 @@ export const PortfolioPage: React.FC = () => {
   const [completedTrades, setCompletedTrades] = useState<TrackedTrade[]>([]);
   const [summary, setSummary] = useState<TradePerformanceSummary>(tradeStorageService.getPerformanceSummary());
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const chartContainerRef = useRef<HTMLDivElement>(null);
+  const chartRef = useRef<IChartApi | null>(null);
 
   const loadData = () => {
     setActiveTrades(tradeStorageService.getActiveTrades());
@@ -65,6 +68,81 @@ export const PortfolioPage: React.FC = () => {
 
   const displayedActive = filterTrades(activeTrades);
   const displayedClosed = filterTrades(completedTrades);
+
+  // Cumulative realized P/L over time, in exit order - the metric cards
+  // above only ever showed the current snapshot (total P/L, win rate), with
+  // no way to see whether that total built up steadily or came from one big
+  // early win followed by a losing streak. No fabricated "starting capital"
+  // baseline here (unlike the Backtesting simulator, which has an explicit
+  // user-chosen initial_capital) - this is real manually-tracked trades, so
+  // the honest curve starts at ₹0 and shows cumulative realized P/L.
+  const sortedClosed = [...completedTrades]
+    .filter(t => t.exit_time)
+    .sort((a, b) => new Date(a.exit_time!).getTime() - new Date(b.exit_time!).getTime());
+  let running = 0;
+  const equityCurve = sortedClosed.map(t => {
+    running += t.profit_amount;
+    return { time: t.exit_time!.slice(0, 10), value: Math.round(running * 100) / 100 };
+  });
+
+  useEffect(() => {
+    if (!chartContainerRef.current || equityCurve.length < 2) return;
+    chartContainerRef.current.innerHTML = '';
+
+    const chart = createChart(chartContainerRef.current, {
+      width: chartContainerRef.current.clientWidth,
+      height: 260,
+      layout: {
+        background: { type: ColorType.Solid, color: '#09090b' },
+        textColor: '#94a3b8',
+        fontSize: 11,
+        fontFamily: "'Inter', sans-serif",
+      },
+      grid: {
+        vertLines: { color: 'rgba(30, 41, 59, 0.3)' },
+        horzLines: { color: 'rgba(30, 41, 59, 0.3)' },
+      },
+      rightPriceScale: { borderColor: '#1e293b' },
+      timeScale: { borderColor: '#1e293b' },
+    });
+    chartRef.current = chart;
+
+    const isProfit = equityCurve[equityCurve.length - 1].value >= 0;
+    const series = chart.addAreaSeries({
+      topColor: isProfit ? 'rgba(16, 185, 129, 0.4)' : 'rgba(239, 68, 68, 0.4)',
+      bottomColor: isProfit ? 'rgba(16, 185, 129, 0.0)' : 'rgba(239, 68, 68, 0.0)',
+      lineColor: isProfit ? '#10b981' : '#ef4444',
+      lineWidth: 2,
+    });
+    series.setData(equityCurve);
+
+    series.createPriceLine({
+      price: 0,
+      color: '#64748b',
+      lineWidth: 1,
+      lineStyle: 2,
+      axisLabelVisible: true,
+      title: 'Break-even',
+    });
+
+    chart.timeScale().fitContent();
+
+    const handleResize = () => {
+      if (chartContainerRef.current && chartRef.current) {
+        chartRef.current.resize(chartContainerRef.current.clientWidth, 260);
+      }
+    };
+    const resizeObserver = new ResizeObserver(handleResize);
+    resizeObserver.observe(chartContainerRef.current);
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      resizeObserver.disconnect();
+      chart.remove();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [equityCurve.length, equityCurve[equityCurve.length - 1]?.value]);
 
   return (
     <div className="min-h-screen bg-background text-text font-sans p-6 md:p-8 flex flex-col gap-6 max-w-7xl mx-auto">
@@ -149,6 +227,22 @@ export const PortfolioPage: React.FC = () => {
         </div>
 
       </div>
+
+      {/* Cumulative Realized P/L Curve */}
+      {equityCurve.length >= 2 && (
+        <div className="bg-surface border border-borderDark p-5 rounded-2xl shadow-xl">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-bold text-sm text-white font-mono flex items-center gap-2">
+              <Activity className="w-4 h-4 text-brand" />
+              <span>Cumulative Realized P/L ({sortedClosed.length} closed trades)</span>
+            </h3>
+            <span className={`text-xs font-mono font-bold ${equityCurve[equityCurve.length - 1].value >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+              {equityCurve[equityCurve.length - 1].value >= 0 ? '+' : ''}₹{equityCurve[equityCurve.length - 1].value.toLocaleString('en-IN')}
+            </span>
+          </div>
+          <div ref={chartContainerRef} className="w-full rounded-xl overflow-hidden border border-borderDark/60" />
+        </div>
+      )}
 
       {/* Tabs & Search Filter Controls */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-surface border border-borderDark p-3 rounded-2xl shadow-md font-mono text-xs">
