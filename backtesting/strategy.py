@@ -51,3 +51,36 @@ class TrendMomentumStrategy(BaseStrategy):
         signals[entry] = "BUY"
         signals[exit_signal] = "SELL"
         return signals
+
+
+class MeanReversionStrategy(BaseStrategy):
+    """
+    Long-only mean-reversion strategy (the opposite archetype from
+    TrendMomentumStrategy - buys weakness instead of strength):
+    - Enter when price closes below the lower Bollinger Band (20, 2std)
+      while RSI confirms oversold conditions, betting on a snap-back
+      toward the mean rather than continuation.
+    - Exit when price reverts back to the middle band (the mean itself)
+      or RSI pushes into overbought territory, taking the reversion gain
+      rather than holding for a trend that this strategy isn't designed
+      to capture.
+    """
+    name = "Mean Reversion (Bollinger Bands 20, RSI14)"
+
+    def __init__(self, rsi_oversold: float = 35.0, rsi_overbought: float = 65.0):
+        self.rsi_oversold = rsi_oversold
+        self.rsi_overbought = rsi_overbought
+
+    def generate_signals(self, df: pd.DataFrame) -> pd.Series:
+        close = df["Close"]
+        bb_lower = df["BB_Lower_20"]
+        bb_middle = df["BB_Middle_20"]
+        rsi = df["RSI_14"]
+
+        entry = (close < bb_lower) & (rsi < self.rsi_oversold)
+        exit_signal = (close >= bb_middle) | (rsi > self.rsi_overbought)
+
+        signals = pd.Series("HOLD", index=df.index)
+        signals[entry] = "BUY"
+        signals[exit_signal] = "SELL"
+        return signals

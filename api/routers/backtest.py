@@ -9,7 +9,7 @@ from analysis.normalizer import TickerNormalizer
 from config.settings import settings
 from api.deps import get_downloader, get_cache
 from api.exceptions import InsufficientDataError, TickerNotFoundError
-from backtesting.strategy import TrendMomentumStrategy
+from backtesting.strategy import TrendMomentumStrategy, MeanReversionStrategy
 from backtesting.engine import BacktestEngine
 from backtesting.metrics import BacktestMetrics
 import pandas as pd
@@ -20,11 +20,17 @@ router = APIRouter(prefix="/backtest", tags=["Backtesting"])
 # cached data actually satisfies the request (see run_backtest below).
 _PERIOD_MIN_BARS = {"1y": 240, "2y": 480, "5y": 1200, "max": 250}
 
+_STRATEGIES = {
+    "trend_momentum": TrendMomentumStrategy,
+    "mean_reversion": MeanReversionStrategy,
+}
+
 
 class BacktestRequest(BaseModel):
     ticker: str
     period: str = Field(default="5y", description="Historical lookback: 1y, 2y, 5y, or max")
     initial_capital: float = Field(default=100000.0, gt=0)
+    strategy: str = Field(default="trend_momentum", description="trend_momentum or mean_reversion")
 
 
 @router.post("/run")
@@ -63,11 +69,17 @@ async def run_backtest(
 
     # Indicators need a warmup window (SMA_200 needs 200 bars); trim the
     # unusable leading rows rather than simulating on incomplete signals.
-    features_df = features_df[features_df["SMA_200"].notna() & features_df["RSI_14"].notna() & features_df["ATR_14"].notna()]
+    # Kept uniform across strategy choices (even though MeanReversion only
+    # needs the much shorter BB_20/RSI_14 warmup) so switching strategies on
+    # the same ticker/period simulates the exact same date range - otherwise
+    # a shorter warmup would let mean reversion "see" extra history the
+    # trend strategy couldn't, making any comparison between them unfair.
+    features_df = features_df[features_df["SMA_200"].notna() & features_df["RSI_14"].notna() & features_df["ATR_14"].notna() & features_df["BB_Lower_20"].notna()]
     if len(features_df) < 30:
         raise InsufficientDataError(processed_ticker, len(features_df))
 
-    strategy = TrendMomentumStrategy()
+    strategy_key = request.strategy if request.strategy in _STRATEGIES else "trend_momentum"
+    strategy = _STRATEGIES[strategy_key]()
     engine = BacktestEngine(data=features_df, strategy=strategy, initial_capital=request.initial_capital)
     result = engine.run()
 

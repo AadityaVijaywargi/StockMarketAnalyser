@@ -8,11 +8,16 @@ import { apiService } from '../services/api';
 import { BacktestResult } from '../types';
 
 const PERIOD_OPTIONS = ['1y', '2y', '5y', 'max'];
+const STRATEGY_OPTIONS = [
+  { value: 'trend_momentum', label: 'Trend + Momentum', description: 'SMA50/200 crossover with RSI14 confirmation - buys strength, follows the trend.' },
+  { value: 'mean_reversion', label: 'Mean Reversion', description: 'Bollinger Bands (20, 2std) with RSI14 - buys oversold dips, bets on a snap-back to the mean.' },
+];
 
 export const BacktestingPage: React.FC = () => {
   const [ticker, setTicker] = useState<string>('RELIANCE.NS');
   const [period, setPeriod] = useState<string>('5y');
   const [capital, setCapital] = useState<number>(100000);
+  const [strategy, setStrategy] = useState<string>('trend_momentum');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<BacktestResult | null>(null);
@@ -26,7 +31,7 @@ export const BacktestingPage: React.FC = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await apiService.runBacktest(cleanTicker, period, capital);
+      const data = await apiService.runBacktest(cleanTicker, period, capital, strategy);
       setResult(data);
     } catch (err: any) {
       setError(err?.response?.data?.detail || 'Unable to run backtest for this ticker. Check the symbol and try again.');
@@ -134,13 +139,14 @@ export const BacktestingPage: React.FC = () => {
             <span>Strategy Backtesting</span>
           </h1>
           <p className="text-xs text-textMuted mt-1">
-            Simulates {result?.strategy_name || 'a Trend + Momentum (SMA50/200, RSI14)'} strategy against real historical daily data, one position at a time, with an ATR-based stop loss and target.
+            Simulates {result?.strategy_name || STRATEGY_OPTIONS.find(s => s.value === strategy)?.label} strategy against real historical daily data, one position at a time, with an ATR-based stop loss and target.
           </p>
         </div>
       </div>
 
       {/* Run Controls */}
-      <div className="bg-surface border border-borderDark p-4 rounded-2xl shadow-lg flex flex-col sm:flex-row items-stretch sm:items-end gap-3 font-mono text-xs">
+      <div className="bg-surface border border-borderDark p-4 rounded-2xl shadow-lg flex flex-col gap-3 font-mono text-xs">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-3">
         <div className="flex flex-col gap-1.5 flex-1">
           <label className="text-textMuted font-semibold">Ticker</label>
           <input
@@ -150,6 +156,23 @@ export const BacktestingPage: React.FC = () => {
             placeholder="e.g. RELIANCE.NS"
             className="bg-background border border-borderDark/80 rounded-xl px-3 py-2 text-white outline-none focus:border-brand/60"
           />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <label className="text-textMuted font-semibold">Strategy</label>
+          <div className="flex items-center bg-background border border-borderDark/80 p-1 rounded-xl gap-1">
+            {STRATEGY_OPTIONS.map(s => (
+              <button
+                key={s.value}
+                onClick={() => setStrategy(s.value)}
+                title={s.description}
+                className={`px-3 py-1.5 rounded-lg font-bold transition-all whitespace-nowrap ${
+                  strategy === s.value ? 'bg-brand text-white shadow-md shadow-brand/20' : 'text-textMuted hover:text-white hover:bg-white/[0.04]'
+                }`}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
         </div>
         <div className="flex flex-col gap-1.5">
           <label className="text-textMuted font-semibold">Lookback Period</label>
@@ -186,6 +209,8 @@ export const BacktestingPage: React.FC = () => {
           {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
           <span>{isLoading ? 'Simulating...' : 'Run Backtest'}</span>
         </button>
+        </div>
+        <p className="text-[11px] text-textMuted">{STRATEGY_OPTIONS.find(s => s.value === strategy)?.description}</p>
       </div>
 
       {error && (

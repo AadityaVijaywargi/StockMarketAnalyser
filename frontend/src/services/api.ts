@@ -199,9 +199,9 @@ export const apiService = {
    * Runs a historical strategy simulation for a ticker and returns the
    * equity curve, trade log, and summary performance metrics.
    */
-  async runBacktest(ticker: string, period: string = '5y', initialCapital: number = 100000): Promise<BacktestResult> {
+  async runBacktest(ticker: string, period: string = '5y', initialCapital: number = 100000, strategy: string = 'trend_momentum'): Promise<BacktestResult> {
     const response = await client.post<BacktestResult>('/backtest/run', {
-      ticker, period, initial_capital: initialCapital
+      ticker, period, initial_capital: initialCapital, strategy
     });
     return response.data;
   },
