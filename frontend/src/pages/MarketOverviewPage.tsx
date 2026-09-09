@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { TopNavbar } from '../components/TopNavbar';
 import { apiService } from '../services/api';
 import { watchlistService, WATCHLIST_UPDATED_EVENT } from '../services/watchlist_service';
+import { watchlistMonitorService, WATCHLIST_MONITOR_UPDATED_EVENT } from '../services/watchlist_monitor_service';
 import { 
   Sparkles, 
   Activity, 
@@ -43,6 +44,11 @@ export const MarketOverviewPage: React.FC<MarketOverviewPageProps> = ({ onSearch
     }
   };
 
+  // Uses the same live monitored state WatchlistPage reads from (real
+  // quotes + real model recommendations from watchlistMonitorService),
+  // instead of fabricating counts/performers from the item's list index -
+  // this panel used to show a fake "+2.45% best performer" for every user
+  // regardless of what was actually in their watchlist.
   const computeWatchlistSummary = () => {
     const items = watchlistService.getWatchlist();
     if (!items.length) {
@@ -50,23 +56,39 @@ export const MarketOverviewPage: React.FC<MarketOverviewPageProps> = ({ onSearch
       return;
     }
 
+    const monitored = watchlistMonitorService.getAllMonitoredStates();
+    const monitorByTicker: Record<string, any> = {};
+    monitored.forEach(s => { monitorByTicker[s.ticker.toUpperCase().trim()] = s; });
+
+    const bullishRecs = ['STRONG BUY', 'BUY', 'ACCUMULATE'];
+    const bearishRecs = ['REDUCE', 'SELL', 'STRONG SELL'];
+
     let bullishCount = 0;
     let neutralCount = 0;
     let bearishCount = 0;
-    let best = { ticker: items[0].ticker, change: 2.45 };
-    let worst = { ticker: items[0].ticker, change: -1.20 };
+    let best: { ticker: string; change: number } | null = null;
+    let worst: { ticker: string; change: number } | null = null;
 
-    items.forEach((item, idx) => {
-      if (idx % 3 === 0) bullishCount++;
-      else if (idx % 3 === 1) neutralCount++;
-      else bearishCount++;
+    items.forEach(item => {
+      const state = monitorByTicker[item.ticker.toUpperCase().trim()];
+      const rec = state?.recommendation;
+      if (rec && bullishRecs.includes(rec)) bullishCount++;
+      else if (rec && bearishRecs.includes(rec)) bearishCount++;
+      else neutralCount++;
+
+      const currentPrice = state?.quote?.price;
+      if (item.price_at_add && currentPrice) {
+        const changePct = ((currentPrice - item.price_at_add) / item.price_at_add) * 100;
+        if (!best || changePct > best.change) best = { ticker: item.ticker, change: changePct };
+        if (!worst || changePct < worst.change) worst = { ticker: item.ticker, change: changePct };
+      }
     });
 
     setWatchlistSummary({
       total: items.length,
-      bullishCount: bullishCount || 1,
-      neutralCount: neutralCount || 1,
-      bearishCount: bearishCount || 0,
+      bullishCount,
+      neutralCount,
+      bearishCount,
       bestPerformer: best,
       worstPerformer: worst
     });
@@ -78,7 +100,11 @@ export const MarketOverviewPage: React.FC<MarketOverviewPageProps> = ({ onSearch
 
     const handleWatchlistUpdate = () => computeWatchlistSummary();
     window.addEventListener(WATCHLIST_UPDATED_EVENT, handleWatchlistUpdate);
-    return () => window.removeEventListener(WATCHLIST_UPDATED_EVENT, handleWatchlistUpdate);
+    window.addEventListener(WATCHLIST_MONITOR_UPDATED_EVENT, handleWatchlistUpdate);
+    return () => {
+      window.removeEventListener(WATCHLIST_UPDATED_EVENT, handleWatchlistUpdate);
+      window.removeEventListener(WATCHLIST_MONITOR_UPDATED_EVENT, handleWatchlistUpdate);
+    };
   }, []);
 
   if (loadingData && !data) {
@@ -290,11 +316,23 @@ export const MarketOverviewPage: React.FC<MarketOverviewPageProps> = ({ onSearch
                 <div className="space-y-2 text-xs font-mono">
                   <div className="p-2.5 rounded-lg bg-background border border-borderDark/80 flex items-center justify-between">
                     <span className="text-slate-400">Best Performer:</span>
-                    <span className="font-bold text-emerald-400">{watchlistSummary.bestPerformer?.ticker} (+{watchlistSummary.bestPerformer?.change}%)</span>
+                    {watchlistSummary.bestPerformer ? (
+                      <span className="font-bold text-emerald-400">
+                        {watchlistSummary.bestPerformer.ticker.replace('.NS', '').replace('.BO', '')} ({watchlistSummary.bestPerformer.change >= 0 ? '+' : ''}{watchlistSummary.bestPerformer.change.toFixed(2)}%)
+                      </span>
+                    ) : (
+                      <span className="text-textMuted">Awaiting live data...</span>
+                    )}
                   </div>
                   <div className="p-2.5 rounded-lg bg-background border border-borderDark/80 flex items-center justify-between">
                     <span className="text-slate-400">Worst Performer:</span>
-                    <span className="font-bold text-rose-400">{watchlistSummary.worstPerformer?.ticker} ({watchlistSummary.worstPerformer?.change}%)</span>
+                    {watchlistSummary.worstPerformer ? (
+                      <span className="font-bold text-rose-400">
+                        {watchlistSummary.worstPerformer.ticker.replace('.NS', '').replace('.BO', '')} ({watchlistSummary.worstPerformer.change >= 0 ? '+' : ''}{watchlistSummary.worstPerformer.change.toFixed(2)}%)
+                      </span>
+                    ) : (
+                      <span className="text-textMuted">Awaiting live data...</span>
+                    )}
                   </div>
                 </div>
               </div>
