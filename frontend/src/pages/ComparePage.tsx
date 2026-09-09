@@ -1,10 +1,13 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { createChart, ColorType, IChartApi } from 'lightweight-charts';
-import { DeterministicAnalysisReport } from '../types';
+import { DeterministicAnalysisReport, TopOpportunityCard } from '../types';
 import { apiService } from '../services/api';
 import { SearchBar } from '../components/search/SearchBar';
-import { GitCompare, X, Loader2, TrendingUp, TrendingDown, AlertCircle, Download } from 'lucide-react';
+import { GitCompare, X, Loader2, TrendingUp, TrendingDown, AlertCircle, Download, ThumbsUp, ThumbsDown, Lightbulb, ArrowRight } from 'lucide-react';
+
+const BULLISH_RECS = ['STRONG BUY', 'BUY', 'ACCUMULATE'];
+const BEARISH_RECS = ['REDUCE', 'SELL', 'STRONG SELL'];
 
 const MAX_COMPARE = 4;
 
@@ -35,10 +38,20 @@ const riskColor = (level?: string) => {
 };
 
 export const ComparePage: React.FC = () => {
+  const navigate = useNavigate();
   const [slots, setSlots] = useState<ComparisonSlot[]>([]);
   const [lookback, setLookback] = useState<string>('1Y');
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
+
+  // Powers both "better alternatives" (same-sector stocks not already in
+  // the comparison) and gives a broader pool than just the 2-4 stocks the
+  // user picked. Best-effort: the scan can still be "computing" on a cold
+  // cache, in which case alternatives are just omitted rather than faked.
+  const [opportunities, setOpportunities] = useState<TopOpportunityCard[]>([]);
+  useEffect(() => {
+    apiService.getTopOpportunities(50).then(res => setOpportunities(res.opportunities || [])).catch(() => {});
+  }, []);
 
   const addTicker = useCallback(async (rawTicker: string) => {
     const ticker = rawTicker.toUpperCase().trim();
@@ -88,6 +101,39 @@ export const ComparePage: React.FC = () => {
   };
 
   const loadedSlots = slots.filter(s => s.report);
+
+  // Buy/Avoid pick - purely a ranking of the stocks the user actually
+  // selected, by the same real overall_score every other panel already
+  // shows. Reasons are pulled from the report's own positive/negative
+  // factors (real, computed per-stock), not generated text.
+  const rankedByScore = [...loadedSlots].sort((a, b) => b.report!.scores.overall_score - a.report!.scores.overall_score);
+  const buyPick = rankedByScore.length >= 2 ? rankedByScore[0] : null;
+  const avoidPick = rankedByScore.length >= 2 ? rankedByScore[rankedByScore.length - 1] : null;
+
+  // Better-alternative-per-sector - for each real sector represented among
+  // the compared stocks (skipping the "General Market" catch-all, which
+  // isn't a real enough sector signal to base a suggestion on), find the
+  // highest-scoring stock in that same sector from the live opportunities
+  // scan that isn't already in the comparison, and only surface it if its
+  // score genuinely beats every compared stock in that sector - never
+  // suggest a "better" alternative that isn't actually better.
+  const comparedTickers = new Set(loadedSlots.map(s => s.ticker.toUpperCase().trim()));
+  const sectorGroups = new Map<string, ComparisonSlot[]>();
+  loadedSlots.forEach(s => {
+    const sectorName = s.report!.market_context?.sector?.sector_name;
+    if (!sectorName || sectorName === 'General Market' || sectorName === 'UNKNOWN') return;
+    if (!sectorGroups.has(sectorName)) sectorGroups.set(sectorName, []);
+    sectorGroups.get(sectorName)!.push(s);
+  });
+
+  const sectorAlternatives = Array.from(sectorGroups.entries()).map(([sectorName, group]) => {
+    const bestInGroup = group.reduce((a, b) => a.report!.scores.overall_score >= b.report!.scores.overall_score ? a : b);
+    const alt = opportunities
+      .filter(o => o.sector === sectorName && !comparedTickers.has(o.ticker.toUpperCase().trim()))
+      .sort((a, b) => b.overall_score - a.overall_score)[0];
+    if (!alt || alt.overall_score <= bestInGroup.report!.scores.overall_score) return null;
+    return { sectorName, comparedTickers: group.map(g => g.ticker), bestInGroup, alt };
+  }).filter((x): x is NonNullable<typeof x> => x !== null);
 
   useEffect(() => {
     if (!chartContainerRef.current || loadedSlots.length === 0) return;
@@ -307,6 +353,86 @@ export const ComparePage: React.FC = () => {
             </tbody>
           </table>
         </div>
+
+        {/* Suggestion Box: buy/avoid pick among the compared stocks, plus
+            better same-sector alternatives not currently in the comparison. */}
+        {buyPick && avoidPick && (
+          <div className="bg-surface border border-brand/30 rounded-2xl p-5 shadow-premium flex flex-col gap-4">
+            <h3 className="font-bold text-sm text-white font-mono flex items-center gap-2">
+              <Lightbulb className="w-4 h-4 text-brand" />
+              <span>Suggestion</span>
+            </h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-4 rounded-xl bg-bullish/5 border border-bullish/30">
+                <div className="flex items-center gap-2 mb-2">
+                  <ThumbsUp className="w-4 h-4 text-bullish" />
+                  <span className="text-xs font-mono font-bold text-bullish uppercase tracking-wide">Best of these {loadedSlots.length}</span>
+                </div>
+                <button
+                  onClick={() => navigate(`/dashboard/${buyPick.ticker}`)}
+                  className="text-sm font-bold text-white hover:text-brand transition-colors"
+                >
+                  {buyPick.report!.company_name} ({buyPick.ticker.replace('.NS', '').replace('.BO', '')})
+                </button>
+                <p className="text-xs text-textMuted mt-1">
+                  Score {buyPick.report!.scores.overall_score.toFixed(1)}/100, rated <span className="font-bold text-bullish">{buyPick.report!.scores.recommendation}</span>
+                  {!BULLISH_RECS.includes(buyPick.report!.scores.recommendation) && ' (though not itself a buy-rated stock — it just scores best among the ones you picked)'}.
+                </p>
+                {buyPick.report!.positive_factors?.[0] && (
+                  <p className="text-[11px] text-slate-300 mt-2 flex items-start gap-1.5">
+                    <span className="w-1 h-1 rounded-full bg-bullish shrink-0 mt-1.5" />
+                    <span>{buyPick.report!.positive_factors[0]}</span>
+                  </p>
+                )}
+              </div>
+
+              <div className="p-4 rounded-xl bg-bearish/5 border border-bearish/30">
+                <div className="flex items-center gap-2 mb-2">
+                  <ThumbsDown className="w-4 h-4 text-bearish" />
+                  <span className="text-xs font-mono font-bold text-bearish uppercase tracking-wide">Weakest of these {loadedSlots.length}</span>
+                </div>
+                <button
+                  onClick={() => navigate(`/dashboard/${avoidPick.ticker}`)}
+                  className="text-sm font-bold text-white hover:text-brand transition-colors"
+                >
+                  {avoidPick.report!.company_name} ({avoidPick.ticker.replace('.NS', '').replace('.BO', '')})
+                </button>
+                <p className="text-xs text-textMuted mt-1">
+                  Score {avoidPick.report!.scores.overall_score.toFixed(1)}/100, rated <span className="font-bold text-bearish">{avoidPick.report!.scores.recommendation}</span>
+                  {BULLISH_RECS.includes(avoidPick.report!.scores.recommendation) && " (still a decent stock overall — it's only weakest relative to the others here)"}.
+                </p>
+                {avoidPick.report!.negative_factors?.[0] && (
+                  <p className="text-[11px] text-slate-300 mt-2 flex items-start gap-1.5">
+                    <span className="w-1 h-1 rounded-full bg-bearish shrink-0 mt-1.5" />
+                    <span>{avoidPick.report!.negative_factors[0]}</span>
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {sectorAlternatives.length > 0 && (
+              <div className="flex flex-col gap-2.5 pt-1 border-t border-borderDark/60">
+                <span className="text-[11px] text-textMuted font-mono uppercase tracking-wide">Better alternatives by sector</span>
+                {sectorAlternatives.map(({ sectorName, comparedTickers: cts, bestInGroup, alt }) => (
+                  <div key={sectorName} className="flex flex-wrap items-center justify-between gap-2 p-3 rounded-xl bg-background border border-borderDark/60">
+                    <div className="text-xs font-mono text-slate-300">
+                      <span className="text-textMuted">{sectorName}:</span>{' '}
+                      you compared {cts.map(t => t.replace('.NS', '').replace('.BO', '')).join(', ')} (best: {bestInGroup.report!.scores.overall_score.toFixed(1)}/100)
+                    </div>
+                    <button
+                      onClick={() => navigate(`/dashboard/${alt.ticker}`)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand/15 border border-brand/40 text-brand text-[11px] font-mono font-bold hover:bg-brand/25 transition-all"
+                    >
+                      <span>Try {alt.ticker.replace('.NS', '').replace('.BO', '')} ({alt.overall_score.toFixed(1)}/100)</span>
+                      <ArrowRight className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
         </>
       )}
     </div>
