@@ -11,6 +11,8 @@ from api.deps import get_downloader, get_cache
 from api.exceptions import InsufficientDataError, TickerNotFoundError
 from backtesting.strategy import TrendMomentumStrategy
 from backtesting.engine import BacktestEngine
+from backtesting.metrics import BacktestMetrics
+import pandas as pd
 
 router = APIRouter(prefix="/backtest", tags=["Backtesting"])
 
@@ -69,9 +71,30 @@ async def run_backtest(
     engine = BacktestEngine(data=features_df, strategy=strategy, initial_capital=request.initial_capital)
     result = engine.run()
 
+    # Buy & Hold benchmark - the question every backtest result needs to
+    # answer is "did the strategy actually beat just holding the stock?".
+    # Computed over the exact same trimmed date range as the strategy run
+    # (features_df, not the raw untrimmed stock_df) so the comparison is
+    # apples-to-apples rather than the benchmark getting extra warmup days.
+    first_close = float(features_df["Close"].iloc[0])
+    bh_shares = request.initial_capital / first_close
+    bh_equity_values = (features_df["Close"].astype(float) * bh_shares).tolist()
+    bh_equity_dates = [d.strftime("%Y-%m-%d") if hasattr(d, "strftime") else str(d) for d in features_df.index]
+    bh_equity_series = pd.Series(bh_equity_values, index=pd.to_datetime(bh_equity_dates))
+    bh_metrics = BacktestMetrics.summarize(bh_equity_series, [], request.initial_capital)
+
+    strategy_return = result["metrics"]["total_return_pct"]
+    benchmark_return = bh_metrics["total_return_pct"]
+
     return {
         "ticker": processed_ticker,
         "period": period,
         "bars_simulated": len(features_df),
         **result,
+        "benchmark": {
+            "name": "Buy & Hold",
+            "equity_curve": [{"date": d, "value": round(v, 2)} for d, v in zip(bh_equity_dates, bh_equity_values)],
+            "metrics": bh_metrics,
+        },
+        "alpha_pct": round(strategy_return - benchmark_return, 2),
     }

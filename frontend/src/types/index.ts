@@ -528,6 +528,12 @@ export interface BacktestMetrics {
   avg_loss_pct: number;
 }
 
+export interface BacktestBenchmark {
+  name: string;
+  equity_curve: { date: string; value: number }[];
+  metrics: BacktestMetrics;
+}
+
 export interface BacktestResult {
   ticker: string;
   period: string;
@@ -538,6 +544,8 @@ export interface BacktestResult {
   trades: BacktestTrade[];
   open_position: { entry_date: string; entry_price: number; unrealized_pnl_pct: number } | null;
   metrics: BacktestMetrics;
+  benchmark: BacktestBenchmark;
+  alpha_pct: number;
 }
 
 export interface TradePerformanceSummary {

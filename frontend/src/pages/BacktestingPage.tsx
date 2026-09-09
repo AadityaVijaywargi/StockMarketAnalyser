@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { createChart, ColorType, IChartApi } from 'lightweight-charts';
 import {
   Play, TrendingUp, TrendingDown, Percent, Activity, ShieldAlert,
-  Target, Loader2, AlertCircle, BarChart2
+  Target, Loader2, AlertCircle, BarChart2, Trophy, Download
 } from 'lucide-react';
 import { apiService } from '../services/api';
 import { BacktestResult } from '../types';
@@ -36,6 +36,22 @@ export const BacktestingPage: React.FC = () => {
     }
   };
 
+  const handleExportCSV = () => {
+    if (!result) return;
+    const header = 'Entry Date,Exit Date,Entry Price,Exit Price,PnL %,Exit Reason\n';
+    const rows = result.trades.map(t =>
+      `${t.entry_date},${t.exit_date},${t.entry_price},${t.exit_price},${t.pnl_pct},"${t.exit_reason}"`
+    ).join('\n');
+    const csvContent = header + rows;
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `STONKS_Backtest_${result.ticker}_${result.period}_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   useEffect(() => {
     if (!chartContainerRef.current || !result) return;
     chartContainerRef.current.innerHTML = '';
@@ -66,6 +82,16 @@ export const BacktestingPage: React.FC = () => {
       lineWidth: 2,
     });
     series.setData(result.equity_curve.map(p => ({ time: p.date, value: p.value })));
+
+    if (result.benchmark) {
+      const benchmarkSeries = chart.addLineSeries({
+        color: '#64748b',
+        lineWidth: 2,
+        lineStyle: 2,
+        title: result.benchmark.name,
+      });
+      benchmarkSeries.setData(result.benchmark.equity_curve.map(p => ({ time: p.date, value: p.value })));
+    }
 
     const initialLine = series.createPriceLine({
       price: result.initial_capital,
@@ -186,7 +212,7 @@ export const BacktestingPage: React.FC = () => {
       {metrics && result && (
         <>
           {/* Metric Cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-4">
             <div className="bg-surface border border-borderDark p-4 rounded-2xl flex flex-col gap-1.5 shadow-lg">
               <div className="flex items-center gap-1.5 text-textMuted text-[11px] font-mono font-bold">
                 {metrics.total_return_pct >= 0 ? <TrendingUp className="w-3.5 h-3.5 text-emerald-400" /> : <TrendingDown className="w-3.5 h-3.5 text-rose-400" />}
@@ -195,6 +221,17 @@ export const BacktestingPage: React.FC = () => {
               <span className={`text-xl font-extrabold font-mono ${metrics.total_return_pct >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                 {metrics.total_return_pct >= 0 ? '+' : ''}{metrics.total_return_pct}%
               </span>
+            </div>
+
+            <div className={`bg-surface border p-4 rounded-2xl flex flex-col gap-1.5 shadow-lg ${result.alpha_pct >= 0 ? 'border-emerald-500/40' : 'border-rose-500/40'}`}>
+              <div className="flex items-center gap-1.5 text-textMuted text-[11px] font-mono font-bold">
+                <Trophy className="w-3.5 h-3.5 text-amber-400" />
+                <span>vs Buy &amp; Hold</span>
+              </div>
+              <span className={`text-xl font-extrabold font-mono ${result.alpha_pct >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                {result.alpha_pct >= 0 ? '+' : ''}{result.alpha_pct}%
+              </span>
+              <span className="text-[10px] text-textMuted">B&amp;H: {result.benchmark.metrics.total_return_pct >= 0 ? '+' : ''}{result.benchmark.metrics.total_return_pct}%</span>
             </div>
 
             <div className="bg-surface border border-borderDark p-4 rounded-2xl flex flex-col gap-1.5 shadow-lg">
@@ -254,13 +291,26 @@ export const BacktestingPage: React.FC = () => {
                 Final Value: <span className="text-white font-bold">₹{metrics.final_value.toLocaleString('en-IN')}</span>
               </span>
             </div>
+            <div className="flex items-center gap-4 mb-2 text-[10px] font-mono text-textMuted">
+              <span className="flex items-center gap-1.5"><span className={`w-3 h-0.5 ${metrics.total_return_pct >= 0 ? 'bg-emerald-400' : 'bg-rose-400'} inline-block`} /> Strategy</span>
+              <span className="flex items-center gap-1.5"><span className="w-3 inline-block" style={{ borderTop: '2px dashed #64748b' }} /> Buy &amp; Hold</span>
+            </div>
             <div ref={chartContainerRef} className="w-full rounded-xl overflow-hidden border border-borderDark/60" />
           </div>
 
           {/* Trade Log */}
           <div className="bg-surface border border-borderDark rounded-2xl overflow-hidden shadow-xl">
-            <div className="p-4 border-b border-borderDark/60">
+            <div className="p-4 border-b border-borderDark/60 flex items-center justify-between">
               <h3 className="font-bold text-sm text-white font-mono">Trade Log ({result.trades.length})</h3>
+              {result.trades.length > 0 && (
+                <button
+                  onClick={handleExportCSV}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-brand/15 border border-brand/40 text-brand rounded-lg text-[11px] font-mono font-bold hover:bg-brand/25 transition-all"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Export CSV</span>
+                </button>
+              )}
             </div>
             {result.trades.length === 0 ? (
               <div className="p-10 text-center text-textMuted text-xs font-mono">No trades were triggered over this period.</div>
