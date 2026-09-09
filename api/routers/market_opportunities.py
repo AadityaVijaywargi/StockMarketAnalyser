@@ -19,9 +19,12 @@ from analysis.feature_store import FeatureStore
 from analysis.scoring import RuleBasedScorer
 from market.market_downloader import MarketDownloader
 from intelligence import ReportGenerator
-from analysis.models.market import TopOpportunityCard, TopOpportunitiesResponse
+from analysis.models.market import TopOpportunityCard, TopOpportunitiesResponse, IndexTrendModel
 from analysis.normalizer import TickerNormalizer
-from config.constants import SECTOR_MAP, SECTOR_NAMES, DEFAULT_BENCHMARK_INDEX
+from config.constants import SECTOR_MAP, SECTOR_NAMES, DEFAULT_BENCHMARK_INDEX, BANK_NIFTY_INDEX, INDIA_VIX_INDEX
+from market.market_analysis import analyze_index_trend
+from market.vix_analysis import analyze_vix
+from market.sector_analysis import analyze_sector_performance
 
 logger = logging.getLogger("AIEquityResearchPlatform")
 
@@ -56,6 +59,27 @@ _scan_in_progress = False
 
 # Stock Universe Catalog Path
 SYMBOLS_JSON_PATH = os.path.join("frontend", "src", "components", "search", "symbols.json")
+
+# The 10 NSE sector indices shown on the Market Overview page. All real,
+# fetchable Yahoo Finance index tickers (verified live) - the dashboard used
+# to show these with hardcoded daily_change_pct/rs values that never moved
+# regardless of the actual date, which is the same class of bug as the
+# watchlist "Best Performer" fabrication fixed earlier.
+SECTOR_UNIVERSE = [
+    ("NIFTY BANK", "^NSEBANK"),
+    ("NIFTY IT", "^CNXIT"),
+    ("NIFTY PHARMA", "^CNXPHARMA"),
+    ("NIFTY AUTO", "^CNXAUTO"),
+    ("NIFTY METAL", "^CNXMETAL"),
+    ("NIFTY ENERGY", "^CNXENERGY"),
+    ("NIFTY CONSUMPTION", "^CNXCONSUMP"),
+    ("NIFTY INFRA", "^CNXINFRA"),
+    ("NIFTY FMCG", "^CNXFMCG"),
+    ("NIFTY REALTY", "^CNXREALTY"),
+]
+
+CRUDE_OIL_TICKER = "CL=F"       # WTI Crude Futures, USD/barrel
+USD_INR_TICKER = "USDINR=X"     # USD/INR spot rate
 
 
 @router.get("/search")
@@ -371,127 +395,236 @@ def get_market_overview(
     watch_candidates = [c for c in all_cards if 50.0 <= c.overall_score < 70.0][:6]
     avoid_candidates = [c for c in all_cards if c.overall_score < 50.0][:6]
 
-    # Fallback populator if universe is tightly clustered
+    # Fallback populator if universe is tightly clustered. No fabricated
+    # fallback stock card here (a hardcoded "ASIANPAINT.NS AVOID" used to be
+    # inserted whenever the real scan found zero avoid candidates) - if the
+    # scanned universe genuinely has no avoid-grade stocks right now, the
+    # honest answer is an empty list, not an invented one.
     if not watch_candidates and len(buy_candidates) > 3:
         watch_candidates = buy_candidates[3:]
         buy_candidates = buy_candidates[:3]
-    if not avoid_candidates:
-        avoid_candidates = [
-            {
-                "ticker": "ASIANPAINT.NS",
-                "company_name": "Asian Paints Limited",
-                "current_price": 2840.50,
-                "price_change_pct": -1.45,
-                "overall_score": 42.5,
-                "recommendation": "AVOID",
-                "confidence": 78.0,
-                "trend_direction": "BEARISH",
-                "sector": "Consumer Goods",
-                "top_bullish_factors": ["High brand equity"],
-                "top_bearish_factors": ["Crude derivative raw material pressure", "Margin contraction"],
-                "key_highlights": ["Trading below 50-day EMA", "Crude volatility exposure"]
-            }
-        ]
 
-    # 2. Sector Performance Data
-    raw_sectors = [
-        {"name": "NIFTY BANK", "symbol": "^NSEBANK", "change": 1.45, "rs": 1.25, "trend": "BULLISH"},
-        {"name": "NIFTY IT", "symbol": "^CNXIT", "change": 1.20, "rs": 1.18, "trend": "BULLISH"},
-        {"name": "NIFTY PHARMA", "symbol": "^CNXPHARMA", "change": 0.85, "rs": 1.05, "trend": "BULLISH"},
-        {"name": "NIFTY AUTO", "symbol": "^CNXAUTO", "change": 0.55, "rs": 0.98, "trend": "SIDEWAYS"},
-        {"name": "NIFTY METAL", "symbol": "^CNXMETAL", "change": 0.30, "rs": 0.92, "trend": "SIDEWAYS"},
-        {"name": "NIFTY ENERGY", "symbol": "^CNXENERGY", "change": 0.15, "rs": 0.88, "trend": "SIDEWAYS"},
-        {"name": "NIFTY CONSUMPTION", "symbol": "^CNXCONSUMP", "change": -0.10, "rs": 0.84, "trend": "SIDEWAYS"},
-        {"name": "NIFTY INFRA", "symbol": "^CNXINFRA", "change": -0.35, "rs": 0.79, "trend": "BEARISH"},
-        {"name": "NIFTY FMCG", "symbol": "^CNXFMCG", "change": -0.65, "rs": 0.72, "trend": "BEARISH"},
-        {"name": "NIFTY REALTY", "symbol": "^CNXREALTY", "change": -1.10, "rs": 0.65, "trend": "BEARISH"},
-    ]
+    full_buy_count = len([c for c in all_cards if c.overall_score >= 70.0])
+    avg_confidence = (sum(c.confidence for c in all_cards) / len(all_cards)) if all_cards else 50.0
 
-    sorted_sectors = sorted(raw_sectors, key=lambda s: s["change"], reverse=True)
+    # 2. Real macro context: Nifty/Bank Nifty trend, India VIX regime, and
+    # crude/USDINR levels - all fetched from the same Yahoo index/downloader
+    # infrastructure the per-stock analysis pipeline already uses.
+    nifty_df = market_downloader.get_index_data(DEFAULT_BENCHMARK_INDEX)
+    bank_nifty_df = market_downloader.get_index_data(BANK_NIFTY_INDEX)
+    vix_df = market_downloader.get_index_data(INDIA_VIX_INDEX)
+
+    nifty_trend = IndexTrendModel(**analyze_index_trend(nifty_df, DEFAULT_BENCHMARK_INDEX))
+    bank_nifty_trend = IndexTrendModel(**analyze_index_trend(bank_nifty_df, BANK_NIFTY_INDEX))
+    vix_analysis = analyze_vix(vix_df)
+
+    nifty_last = float(nifty_df["Close"].iloc[-1]) if not nifty_df.empty else 0.0
+    nifty_change_pct = (
+        (nifty_df["Close"].iloc[-1] - nifty_df["Close"].iloc[-2]) / nifty_df["Close"].iloc[-2] * 100.0
+        if len(nifty_df) >= 2 else 0.0
+    )
+
+    try:
+        crude_df = market_downloader.get_index_data(CRUDE_OIL_TICKER)
+        crude_price = float(crude_df["Close"].iloc[-1]) if not crude_df.empty else None
+        crude_change_pct = (
+            float((crude_df["Close"].iloc[-1] - crude_df["Close"].iloc[-2]) / crude_df["Close"].iloc[-2] * 100.0)
+            if len(crude_df) >= 2 else 0.0
+        )
+    except Exception as e:
+        logger.warning(f"Failed to fetch crude oil data: {e}")
+        crude_price, crude_change_pct = None, 0.0
+
+    try:
+        usdinr_df = market_downloader.get_index_data(USD_INR_TICKER)
+        usdinr_price = float(usdinr_df["Close"].iloc[-1]) if not usdinr_df.empty else None
+        usdinr_change_pct = (
+            float((usdinr_df["Close"].iloc[-1] - usdinr_df["Close"].iloc[-2]) / usdinr_df["Close"].iloc[-2] * 100.0)
+            if len(usdinr_df) >= 2 else 0.0
+        )
+    except Exception as e:
+        logger.warning(f"Failed to fetch USD/INR data: {e}")
+        usdinr_price, usdinr_change_pct = None, 0.0
+
+    # 3. Sector Performance Data - real daily change per sector index, and a
+    # real relative-strength ratio. Note: relative_strength here is each
+    # sector's own 6-month return vs Nifty's 6-month return - i.e. (1 +
+    # sector_return) / (1 + nifty_return), which stays meaningfully near 1.0x
+    # - NOT analyze_sector_performance's raw index-point ratio (that divides
+    # e.g. Bank Nifty's ~51,000 level by Nifty's ~24,000 level, which would
+    # show a nonsensical "2.1x" for every sector regardless of performance;
+    # that function is built for tracking one stock's RS line over time, not
+    # a cross-sector snapshot comparison).
+    nifty_return_6m = (
+        float((nifty_df["Close"].iloc[-1] - nifty_df["Close"].iloc[-126]) / nifty_df["Close"].iloc[-126])
+        if len(nifty_df) >= 126 else 0.0
+    )
+
     sectors_list = []
-    for idx, sec in enumerate(sorted_sectors, start=1):
+    for name, symbol in SECTOR_UNIVERSE:
+        try:
+            sec_df = market_downloader.get_index_data(symbol)
+        except Exception as e:
+            logger.warning(f"Failed to fetch sector index {name} ({symbol}): {e}")
+            continue
+        if sec_df.empty or len(sec_df) < 2:
+            continue
+
+        daily_change_pct = float((sec_df["Close"].iloc[-1] - sec_df["Close"].iloc[-2]) / sec_df["Close"].iloc[-2] * 100.0)
+        sector_perf = analyze_sector_performance(sec_df, nifty_df, name, symbol)
+
+        sector_return_6m = (
+            float((sec_df["Close"].iloc[-1] - sec_df["Close"].iloc[-126]) / sec_df["Close"].iloc[-126])
+            if len(sec_df) >= 126 else 0.0
+        )
+        relative_strength = round((1.0 + sector_return_6m) / (1.0 + nifty_return_6m), 3) if (1.0 + nifty_return_6m) != 0 else 1.0
+
         sectors_list.append({
-            "sector_name": sec["name"],
-            "sector_symbol": sec["symbol"],
-            "daily_change_pct": sec["change"],
-            "relative_strength": sec["rs"],
-            "trend_direction": sec["trend"],
-            "rank": idx,
-            "is_top_3": idx <= 3,
-            "is_bottom_3": idx >= len(sorted_sectors) - 2
+            "sector_name": name,
+            "sector_symbol": symbol,
+            "daily_change_pct": round(daily_change_pct, 2),
+            "relative_strength": relative_strength,
+            "trend_direction": sector_perf["direction"],
+            "sector_momentum": sector_perf["sector_momentum"],
         })
 
-    # 3. Market Health Score Breakdown
+    sectors_list.sort(key=lambda s: s["daily_change_pct"], reverse=True)
+    for idx, sec in enumerate(sectors_list, start=1):
+        sec["rank"] = idx
+        sec["is_top_3"] = idx <= 3
+        sec["is_bottom_3"] = idx >= len(sectors_list) - 2 if sectors_list else False
+
+    strong_sector_names = [s["sector_name"] for s in sectors_list[:3]]
+    weak_sector_names = [s["sector_name"] for s in sectors_list[-3:]][::-1] if sectors_list else []
+    avg_sector_momentum = (
+        sum(s["sector_momentum"] for s in sectors_list) / len(sectors_list) if sectors_list else 50.0
+    )
+
+    # 4. Market Health Score Breakdown - every component derived from a real
+    # computed number above instead of a fixed placeholder that never moved.
+    trend_score = round(min(max(50.0 + (nifty_trend.strength / 2.0 if nifty_trend.direction == "BULLISH"
+                          else -nifty_trend.strength / 2.0 if nifty_trend.direction == "BEARISH" else 0.0), 0.0), 100.0), 1)
+    momentum_score = round(nifty_trend.momentum, 1)
+    breadth_score = round((full_buy_count / len(all_cards) * 100.0) if all_cards else 50.0, 1)
+    volatility_score = round(max(0.0, min(100.0, 100.0 - vix_analysis["percentile"])), 1)
+    sector_strength_score = round(avg_sector_momentum, 1)
+    model_confidence_score = round(avg_confidence, 1)
+
+    overall_score = round(
+        (trend_score + momentum_score + breadth_score + volatility_score + sector_strength_score + model_confidence_score) / 6.0, 1
+    )
+    if overall_score >= 75:
+        health_status = "Strong Health"
+    elif overall_score >= 60:
+        health_status = "Moderate Health"
+    elif overall_score >= 45:
+        health_status = "Cautious"
+    else:
+        health_status = "Weak Health"
+
     health_score = {
-        "overall_score": 78.5,
-        "trend_score": 82.0,
-        "breadth_score": 74.0,
-        "momentum_score": 80.0,
-        "volatility_score": 76.0,
-        "sector_strength_score": 79.0,
-        "news_sentiment_score": 80.0,
-        "status": "Strong Health"
+        "overall_score": overall_score,
+        "trend_score": trend_score,
+        "breadth_score": breadth_score,
+        "momentum_score": momentum_score,
+        "volatility_score": volatility_score,
+        "sector_strength_score": sector_strength_score,
+        "model_confidence_score": model_confidence_score,
+        "status": health_status
     }
 
-    # 4. AI Market Summary
+    # 5. AI Market Summary - templated from the real numbers computed above,
+    # not a fixed narrative (the old copy referenced a static "Nifty at
+    # 24,200" / "VIX at 13.8" regardless of what the market actually did).
+    if nifty_trend.direction == "BULLISH":
+        overall_sentiment = "BULLISH" if overall_score >= 65 else "CAUTIOUS BULLISH"
+    elif nifty_trend.direction == "BEARISH":
+        overall_sentiment = "BEARISH" if overall_score < 45 else "CAUTIOUS BEARISH"
+    else:
+        overall_sentiment = "NEUTRAL"
+
+    concise_summary = (
+        f"Nifty 50 trades at {nifty_last:,.2f} ({nifty_change_pct:+.2f}% today), tracking a "
+        f"{nifty_trend.direction.lower()} 6-month trend (trend strength {nifty_trend.strength:.0f}/100). "
+        f"India VIX is at {vix_analysis['vix_value']} ({vix_analysis['regime']} regime, "
+        f"{vix_analysis['percentile']:.0f}th percentile of the past year)."
+    )
+    if strong_sector_names and weak_sector_names:
+        concise_summary += f" {strong_sector_names[0]} leads sector performance today while {weak_sector_names[0]} lags."
+
+    key_drivers = [
+        f"{nifty_trend.direction.title()} Nifty 50 trend, {nifty_trend.strength:.0f}/100 trend strength over the last 6 months",
+        f"India VIX at {vix_analysis['vix_value']} indicates a {vix_analysis['regime'].lower()} volatility regime",
+        f"{full_buy_count} of {len(all_cards)} scanned stocks meet BUY-grade technical criteria (score ≥ 70)" if all_cards else "Market scan warming up - opportunity counts will populate shortly",
+    ]
+
+    primary_risks = []
+    if vix_analysis["regime"] in ("Elevated", "Extreme"):
+        primary_risks.append(f"Elevated India VIX ({vix_analysis['vix_value']}, {vix_analysis['regime'].lower()} regime) signals heightened hedging activity")
+    if crude_price is not None:
+        primary_risks.append(f"WTI Crude at ${crude_price:,.2f}/bbl ({crude_change_pct:+.2f}%) - a swing factor for input costs and inflation")
+    if usdinr_price is not None:
+        primary_risks.append(f"USD/INR at ₹{usdinr_price:,.2f} ({usdinr_change_pct:+.2f}%) affects import costs and IT/Pharma export margins")
+    if weak_sector_names:
+        primary_risks.append(f"{weak_sector_names[0]} showing relative weakness vs Nifty 50")
+    if not primary_risks:
+        primary_risks.append("No elevated risk signals detected in current scan")
+
     ai_summary = {
-        "overall_sentiment": "CAUTIOUS BULLISH",
-        "concise_summary": "Indian equity markets maintain resilient momentum supported by steady institutional accumulation in Banking and IT benchmarks. Nifty 50 trades comfortably above key support levels at 24,200 with low volatility (India VIX at 13.8). While global interest rate uncertainty presents temporary overhead, sector rotation into defensives like Pharma provides downside buffer.",
-        "key_drivers": [
-            "Net DII & FII institutional inflows into Banking majors",
-            "Robust Q1 corporate revenue growth in IT exporters",
-            "Stable macroeconomic indicators and controlled headline inflation"
-        ],
-        "strong_sectors": ["NIFTY BANK", "NIFTY IT", "NIFTY PHARMA"],
-        "weak_sectors": ["NIFTY REALTY", "NIFTY FMCG", "NIFTY INFRA"],
-        "primary_risks": [
-            "Central bank interest rate commentary & global bond yield volatility",
-            "Crude oil price fluctuations above $82/bbl"
-        ],
-        "top_opportunities": [
-            "Breakout pullbacks in Banking and IT leaders",
-            "High relative strength accumulation candidates"
-        ]
+        "overall_sentiment": overall_sentiment,
+        "concise_summary": concise_summary,
+        "key_drivers": key_drivers,
+        "strong_sectors": strong_sector_names,
+        "weak_sectors": weak_sector_names,
+        "primary_risks": primary_risks[:3],
+        "top_opportunities": (
+            [f"{full_buy_count} stocks meet BUY-grade criteria (score ≥ 70) in today's scan"]
+            + ([f"{strong_sector_names[0]} showing the strongest relative sector momentum"] if strong_sector_names else [])
+        ) if all_cards else ["Market scan in progress - check back shortly"]
     }
 
-    # 5. Dedicated Market Risks Panel
+    # 6. Dedicated Market Risks Panel - every card backed by a real fetched
+    # number (VIX, Bank Nifty as a rate-sensitivity proxy, crude, USD/INR,
+    # Nifty trend strength) instead of static prose with invented figures.
     market_risks = [
         {
-            "title": "RBI Monetary Policy & Inflation Stance",
-            "category": "Economic",
-            "severity": "Medium",
-            "description": "Monetary committee maintaining data-dependent stance while tracking monsoon progress and food inflation.",
-            "impact_note": "Rate sensitive banking and auto sectors will re-price based on liquidity guidance."
-        },
-        {
-            "title": "India VIX at 13.8 (28th Percentile)",
+            "title": f"India VIX at {vix_analysis['vix_value']} ({vix_analysis['percentile']:.0f}th Percentile)",
             "category": "Volatility",
-            "severity": "Low",
-            "description": "Volatility regime remains within normal historical bounds, indicating absent panic or extreme option hedging.",
-            "impact_note": "Favorable environment for trend-following swing strategies."
+            "severity": "High" if vix_analysis["regime"] == "Extreme" else "Medium" if vix_analysis["regime"] == "Elevated" else "Low",
+            "description": f"Volatility regime is currently classified as {vix_analysis['regime']}, based on trailing 1-year VIX percentile.",
+            "impact_note": "Favorable environment for trend-following swing strategies." if vix_analysis["regime"] in ("Low", "Normal") else "Wider stops and reduced position sizing are warranted while volatility remains elevated."
         },
         {
-            "title": "US Federal Reserve Rate Decisions",
-            "category": "Global",
-            "severity": "Medium",
-            "description": "US inflation readings influencing global liquidity expectations and emerging market capital flows.",
-            "impact_note": "Drives daily FII institutional flow direction in Indian equities."
+            "title": f"Bank Nifty {bank_nifty_trend.direction.title()} ({bank_nifty_trend.momentum:.0f}/100 Momentum)",
+            "category": "Economic",
+            "severity": "Medium" if bank_nifty_trend.direction == "BEARISH" else "Low",
+            "description": f"Bank Nifty, a proxy for rate-sensitive financials, shows a {bank_nifty_trend.direction.lower()} trend with {bank_nifty_trend.strength:.0f}/100 trend strength over 6 months.",
+            "impact_note": "Rate-sensitive banking and auto sectors typically re-price in line with this trend."
         },
-        {
-            "title": "Brent Crude Oil at $82.40 / Barrel",
-            "category": "Commodity",
-            "severity": "Medium",
-            "description": "Fluctuations in global crude prices affect input costs for paints, tires, and oil marketing companies.",
-            "impact_note": "Slight margin drag for consumer discretionary and chemicals."
-        },
-        {
-            "title": "USD / INR Range-bound at 83.45",
-            "category": "Currency",
-            "severity": "Low",
-            "description": "Indian Rupee showing steady stability against the US Dollar.",
-            "impact_note": "Provides export revenue clarity for IT exporters and Pharma."
-        }
     ]
+    if crude_price is not None:
+        market_risks.append({
+            "title": f"WTI Crude Oil at ${crude_price:,.2f}/Barrel ({crude_change_pct:+.2f}%)",
+            "category": "Commodity",
+            "severity": "Medium" if abs(crude_change_pct) >= 2.0 else "Low",
+            "description": "Fluctuations in global crude prices affect input costs for paints, tires, and oil marketing companies.",
+            "impact_note": "Slight margin drag for consumer discretionary and chemicals when crude trends higher."
+        })
+    if usdinr_price is not None:
+        market_risks.append({
+            "title": f"USD/INR at ₹{usdinr_price:,.2f} ({usdinr_change_pct:+.2f}%)",
+            "category": "Currency",
+            "severity": "Medium" if abs(usdinr_change_pct) >= 0.5 else "Low",
+            "description": "Indian Rupee movement against the US Dollar, tracked from live FX spot data.",
+            "impact_note": "A weaker Rupee provides export revenue tailwinds for IT exporters and Pharma; a stronger Rupee compresses those margins."
+        })
+    market_risks.append({
+        "title": f"Nifty 50 {nifty_trend.direction.title()} Trend ({nifty_trend.strength:.0f}/100 Strength)",
+        "category": "Global",
+        "severity": "Medium" if nifty_trend.direction == "BEARISH" else "Low",
+        "description": f"Broad market trend strength over the last 6 months, based on {DEFAULT_BENCHMARK_INDEX} regression fit.",
+        "impact_note": "Drives overall risk appetite and FII/DII flow direction across Indian equities."
+    })
 
     payload = {
         "updated_at": datetime.utcnow().isoformat(),

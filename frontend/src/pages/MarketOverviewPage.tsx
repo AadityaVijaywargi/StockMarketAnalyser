@@ -175,7 +175,7 @@ export const MarketOverviewPage: React.FC<MarketOverviewPageProps> = ({ onSearch
 
             <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/40 text-emerald-400 font-bold text-xs shadow-sm">
               <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>Overall Sentiment: {ai.overall_sentiment || 'CAUTIOUS BULLISH'}</span>
+              <span>Overall Sentiment: {ai.overall_sentiment || 'NEUTRAL'}</span>
             </div>
           </div>
 
@@ -244,7 +244,7 @@ export const MarketOverviewPage: React.FC<MarketOverviewPageProps> = ({ onSearch
                 <h3 className="text-sm font-bold text-white uppercase tracking-wider">Market Health Score</h3>
               </div>
               <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-mono text-xs font-bold border border-emerald-500/30">
-                {health.status || 'Strong Health'}
+                {health.status || 'Calculating...'}
               </span>
             </div>
 
@@ -253,7 +253,7 @@ export const MarketOverviewPage: React.FC<MarketOverviewPageProps> = ({ onSearch
               <div className="flex flex-col items-center justify-center p-4 bg-background/80 rounded-xl border border-borderDark/80 text-center">
                 <span className="text-xs font-mono text-textMuted uppercase mb-1">Overall Score</span>
                 <div className="text-4xl font-black font-mono text-emerald-400 my-1">
-                  {health.overall_score || 78.5}
+                  {health.overall_score ?? '--'}
                   <span className="text-sm text-textMuted font-normal">/100</span>
                 </div>
                 <span className="text-[10px] text-slate-400 font-mono">Macro Institutional Index</span>
@@ -262,12 +262,12 @@ export const MarketOverviewPage: React.FC<MarketOverviewPageProps> = ({ onSearch
               {/* 6 Component Scores */}
               <div className="md:col-span-2 space-y-2.5 font-mono text-xs">
                 {[
-                  { label: 'Market Trend', score: health.trend_score || 82.0 },
-                  { label: 'Market Breadth', score: health.breadth_score || 74.0 },
-                  { label: 'RSI / MACD Momentum', score: health.momentum_score || 80.0 },
-                  { label: 'Volatility Stress (Inverse VIX)', score: health.volatility_score || 76.0 },
-                  { label: 'Sector Strength', score: health.sector_strength_score || 79.0 },
-                  { label: 'News Sentiment', score: health.news_sentiment_score || 80.0 }
+                  { label: 'Market Trend', score: health.trend_score ?? 50.0 },
+                  { label: 'Market Breadth', score: health.breadth_score ?? 50.0 },
+                  { label: 'RSI / MACD Momentum', score: health.momentum_score ?? 50.0 },
+                  { label: 'Volatility Stress (Inverse VIX)', score: health.volatility_score ?? 50.0 },
+                  { label: 'Sector Strength', score: health.sector_strength_score ?? 50.0 },
+                  { label: 'Model Confidence', score: health.model_confidence_score ?? 50.0 }
                 ].map((item, idx) => (
                   <div key={idx} className="flex items-center justify-between gap-3">
                     <span className="text-slate-300 w-44 truncate">{item.label}</span>
@@ -353,7 +353,7 @@ export const MarketOverviewPage: React.FC<MarketOverviewPageProps> = ({ onSearch
               <Layers className="w-5 h-5 text-brand" />
               <h3 className="text-sm font-bold text-white uppercase tracking-wider">Sector Relative Strength & Performance</h3>
             </div>
-            <span className="text-xs text-textMuted font-mono">10 Sectors Sorted by Strength</span>
+            <span className="text-xs text-textMuted font-mono">{sectors.length} Sectors Sorted by Strength</span>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
