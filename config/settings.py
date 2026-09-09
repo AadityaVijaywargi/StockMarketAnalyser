@@ -73,6 +73,14 @@ class Settings(BaseSettings):
     ADMIN_USERNAME: str = Field(default="admin")
     ADMIN_PASSWORD_HASH: str = Field(default="", description="PBKDF2 hash of the admin password, format salt$hash")
 
+    # Optional persistent database for invited-user accounts/invites (see
+    # api/db.py). storage/users.json lives on local disk, which most PaaS
+    # free tiers wipe on every redeploy - set this to a Postgres connection
+    # string (e.g. Render's free/paid Postgres, Supabase, Neon) to persist
+    # real accounts across deploys. Left unset, nothing changes: user_store.py
+    # keeps using the JSON file exactly as before.
+    DATABASE_URL: str = Field(default="", description="Postgres connection string for persistent user/invite storage")
+
     def create_directories(self) -> None:
         """Helper to ensure all storage directories exist."""
         for path in [
