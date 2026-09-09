@@ -124,6 +124,7 @@ class TopOpportunitiesResponse(BaseModel):
     updated_at: str
     total_scanned: int
     opportunities: List[TopOpportunityCard]
+    computing: bool = False
 
 
 class MarketHealthScoreModel(BaseModel):

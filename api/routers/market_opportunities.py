@@ -2,6 +2,7 @@ import time
 import logging
 import json
 import os
+import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List, Dict, Any, Optional
 from datetime import datetime
@@ -41,6 +42,17 @@ SCAN_UNIVERSE_LIMIT = 20  # symbols.json's first 20 entries are large, liquid na
 # UI describing it as a live feed). Tracked as a small module-level cache
 # instead, independent of the per-ticker candle-completion cache above.
 _top_opportunities_cache: Dict[str, Any] = {"data": None, "timestamp": 0.0}
+
+# Guards the background scan below. Even with the CPU-bound work reduced
+# (20-stock universe, skip_intelligence), the scan reliably still took
+# 40s+ on Render's free-tier CPU - past any reasonable HTTP request
+# timeout. Racing the platform's request deadline against Yahoo Finance
+# latency plus Render's CPU limits is the wrong fight: instead, the scan
+# runs in a background thread and the request returns immediately with
+# whatever's already cached (stale is fine - it's clearly labeled) while
+# the fresh scan populates _top_opportunities_cache for the next request.
+_scan_lock = threading.Lock()
+_scan_in_progress = False
 
 # Stock Universe Catalog Path
 SYMBOLS_JSON_PATH = os.path.join("frontend", "src", "components", "search", "symbols.json")
@@ -113,6 +125,133 @@ def load_symbols_catalog() -> List[Dict[str, Any]]:
     ]
 
 
+def _compute_top_opportunities(
+    downloader: YahooDownloader,
+    cache: FileCacheManager,
+    live_cache: InMemoryLiveCache,
+    feature_store: FeatureStore,
+    scorer: RuleBasedScorer,
+    market_downloader: MarketDownloader,
+    report_generator: ReportGenerator,
+) -> None:
+    """Runs the full scan and populates _top_opportunities_cache with every
+    scanned card (unlimited - the `limit` query param is applied when a
+    request is served, not here, so one caller's limit=3 can't leave the
+    cache unable to satisfy a later limit=12 caller). Always called on a
+    background thread - never awaited by a request handler, see the note
+    on _scan_lock above for why."""
+    global _scan_in_progress
+    try:
+        logger.info("Computing Top Opportunities across market watchlist...")
+        from api.routers.analysis import _run_deterministic_pipeline, fetch_live_quote
+
+        catalog = load_symbols_catalog()[:SCAN_UNIVERSE_LIMIT]
+        scanned_count = 0
+        opportunity_cards: List[TopOpportunityCard] = []
+
+        def _scan_one(item: Dict[str, Any]) -> Optional[TopOpportunityCard]:
+            ticker = item["ticker"]
+            company_name = item.get("name", ticker)
+
+            # Execute pipeline (pulls from 24h file cache or downloads).
+            # skip_intelligence=True: per-stock news fetch (up to 3.5s each)
+            # adds meaningfully to a 20-stock scan's wall-clock time and
+            # isn't needed for a quick score-ranked list - only a single
+            # /analyze/{ticker} call needs it.
+            report = _run_deterministic_pipeline(
+                ticker=ticker,
+                downloader=downloader,
+                cache=cache,
+                live_cache=live_cache,
+                report_generator=report_generator,
+                feature_store=feature_store,
+                scorer=scorer,
+                market_downloader=market_downloader,
+                interval="1d",
+                skip_intelligence=True
+            )
+
+            # Extract key details from report output
+            scores = report["scores"]
+            ai_report = report.get("ai_research_report", {}) or {}
+            m_context = report.get("market_context", {}) or {}
+
+            # Fetch or fallback live quote safely
+            try:
+                quote = fetch_live_quote(ticker, live_cache)
+            except Exception:
+                chart_closes = report.get("chart_data", {}).get("close", [])
+                current_p = chart_closes[-1] if chart_closes else 0.0
+                quote = {"price": current_p, "change_pct": 0.0}
+
+            # Key Highlights (Extract up to 3 short bullet points)
+            bullish_factors = [f.get("title", "") for f in ai_report.get("bullish_factors", [])] if isinstance(ai_report, dict) else []
+            bearish_factors = [f.get("title", "") for f in ai_report.get("bearish_factors", [])] if isinstance(ai_report, dict) else []
+
+            highlights = []
+            if scores["trend"]["value"] > 60:
+                highlights.append("Solid uptrend structure")
+            if scores["volume"]["value"] > 60:
+                highlights.append("Institutional accumulation")
+            if scores["sector"]["value"] > 60:
+                highlights.append("Outperforming Nifty 50")
+            if not highlights:
+                highlights = [f[:40] for f in bullish_factors[:2]] if bullish_factors else ["Consolidating structure"]
+
+            sector_name = m_context.get("sector", {}).get("sector_name", "General Market")
+
+            return TopOpportunityCard(
+                ticker=report["ticker"],
+                company_name=company_name,
+                current_price=quote["price"],
+                price_change_pct=quote["change_pct"],
+                overall_score=scores["overall_score"],
+                recommendation=scores["recommendation"],
+                confidence=scores["confidence"],
+                trend_direction="BULLISH" if scores["trend"]["value"] >= 50 else "BEARISH",
+                sector=sector_name,
+                top_bullish_factors=bullish_factors[:3],
+                top_bearish_factors=bearish_factors[:2],
+                key_highlights=highlights[:3]
+            )
+
+        # Running the catalog concurrently helps with this pipeline's I/O
+        # waits (data download); the indicator/pattern/scoring math stays
+        # serialized under Python's GIL regardless of worker count, which is
+        # why this alone wasn't enough (see SCAN_UNIVERSE_LIMIT / the
+        # background-thread architecture above for the rest of the story).
+        with ThreadPoolExecutor(max_workers=8) as executor:
+            future_to_ticker = {executor.submit(_scan_one, item): item["ticker"] for item in catalog}
+            for future in as_completed(future_to_ticker):
+                ticker = future_to_ticker[future]
+                try:
+                    card = future.result()
+                    scanned_count += 1
+                    if card is not None:
+                        opportunity_cards.append(card)
+                except Exception as e:
+                    logger.warning(f"Skipping {ticker} during opportunities scan: {e}")
+
+        # Sort opportunities descending by overall score - unlimited, see
+        # docstring above for why `limit` isn't applied here.
+        opportunity_cards.sort(key=lambda c: c.overall_score, reverse=True)
+
+        response = TopOpportunitiesResponse(
+            updated_at=datetime.utcnow().isoformat(),
+            total_scanned=scanned_count,
+            opportunities=opportunity_cards
+        )
+
+        _top_opportunities_cache["data"] = response.model_dump()
+        _top_opportunities_cache["timestamp"] = time.time()
+        logger.info(f"Top Opportunities scan complete: {scanned_count} scanned, {len(opportunity_cards)} cards cached")
+    except Exception as e:
+        logger.error(f"Top Opportunities background scan failed: {e}")
+    finally:
+        with _scan_lock:
+            _scan_in_progress = False
+
+
 @router.get("/top-opportunities", response_model=TopOpportunitiesResponse)
 def get_top_opportunities(
     limit: int = Query(default=12, ge=1, le=50, description="Max number of top opportunities to return"),
@@ -127,134 +266,65 @@ def get_top_opportunities(
 ):
     """
     Returns top-ranked stock opportunities scanned across liquid NSE stocks.
-    Utilizes 15-minute caching to eliminate unnecessary recomputations.
+
+    Non-blocking: the actual scan (still tens of seconds even after cutting
+    the universe to 20 stocks and skipping per-stock news - confirmed live,
+    it kept exceeding 40s+ on Render's free-tier CPU) runs on a background
+    thread. This request returns immediately with whatever's cached, which
+    may be stale (or, on the very first call ever, empty) rather than
+    block on a computation that was reliably outliving any reasonable HTTP
+    timeout. `computing: true` in the response tells the frontend a fresh
+    scan is in flight so it can retry shortly instead of treating an empty
+    list as "no opportunities found".
     """
-    # 1. Check cache first unless force_refresh is requested
-    if not force_refresh:
-        cached_data = _top_opportunities_cache["data"]
-        cache_age = time.time() - _top_opportunities_cache["timestamp"]
-        if cached_data is not None and cache_age < TOP_OPPORTUNITIES_TTL_SECONDS:
-            logger.info(f"Top Opportunities cache HIT (age {cache_age:.0f}s)")
-            return TopOpportunitiesResponse(**cached_data)
+    global _scan_in_progress
 
-    logger.info("Computing Top Opportunities across market watchlist...")
+    cached_data = _top_opportunities_cache["data"]
+    cache_age = time.time() - _top_opportunities_cache["timestamp"]
+    cache_fresh = cached_data is not None and cache_age < TOP_OPPORTUNITIES_TTL_SECONDS
 
-    from api.routers.analysis import _run_deterministic_pipeline, fetch_live_quote
-
-    # The ThreadPoolExecutor below only helps with this pipeline's I/O waits
-    # (data download, news fetch) - the indicator/pattern/scoring math is
-    # CPU-bound pandas/numpy work that stays serialized under Python's GIL,
-    # so more workers doesn't scale it the way it appeared to on a local
-    # multi-core dev machine. Confirmed live: the full 48-stock catalog
-    # still didn't complete within 40s+ on Render's free-tier CPU even with
-    # 8 workers. Capping the scanned universe directly cuts the CPU-bound
-    # work instead of assuming more threads will parallelize it away.
-    catalog = load_symbols_catalog()[:SCAN_UNIVERSE_LIMIT]
-    scanned_count = 0
-    opportunity_cards = []
-
-    def _scan_one(item: Dict[str, Any]) -> Optional[TopOpportunityCard]:
-        ticker = item["ticker"]
-        company_name = item.get("name", ticker)
-
-        # Execute pipeline (pulls from 24h file cache or downloads).
-        # skip_intelligence=True: per-stock news fetch (up to 3.5s each) adds
-        # meaningfully to a 20-stock scan's wall-clock time and isn't needed
-        # for a quick score-ranked list - only /analyze/{ticker} needs it.
-        report = _run_deterministic_pipeline(
-            ticker=ticker,
-            downloader=downloader,
-            cache=cache,
-            live_cache=live_cache,
-            report_generator=report_generator,
-            feature_store=feature_store,
-            scorer=scorer,
-            market_downloader=market_downloader,
-            interval="1d",
-            skip_intelligence=True
+    if cache_fresh and not force_refresh:
+        logger.info(f"Top Opportunities cache HIT (age {cache_age:.0f}s)")
+        full = TopOpportunitiesResponse(**cached_data)
+        return TopOpportunitiesResponse(
+            updated_at=full.updated_at,
+            total_scanned=full.total_scanned,
+            opportunities=full.opportunities[:limit],
+            computing=False
         )
 
-        # Extract key details from report output
-        scores = report["scores"]
-        ai_report = report.get("ai_research_report", {}) or {}
-        m_context = report.get("market_context", {}) or {}
+    # Cache is stale, absent, or a refresh was explicitly requested - kick
+    # off exactly one background scan (skip if one's already running) and
+    # respond immediately either way.
+    with _scan_lock:
+        already_running = _scan_in_progress
+        if not already_running:
+            _scan_in_progress = True
 
-        # Fetch or fallback live quote safely
-        try:
-            quote = fetch_live_quote(ticker, live_cache)
-        except Exception:
-            chart_closes = report.get("chart_data", {}).get("close", [])
-            current_p = chart_closes[-1] if chart_closes else 0.0
-            quote = {"price": current_p, "change_pct": 0.0}
+    if not already_running:
+        threading.Thread(
+            target=_compute_top_opportunities,
+            args=(downloader, cache, live_cache, feature_store, scorer, market_downloader, report_generator),
+            daemon=True
+        ).start()
 
-        # Key Highlights (Extract up to 3 short bullet points)
-        bullish_factors = [f.get("title", "") for f in ai_report.get("bullish_factors", [])] if isinstance(ai_report, dict) else []
-        bearish_factors = [f.get("title", "") for f in ai_report.get("bearish_factors", [])] if isinstance(ai_report, dict) else []
-
-        highlights = []
-        if scores["trend"]["value"] > 60:
-            highlights.append("Solid uptrend structure")
-        if scores["volume"]["value"] > 60:
-            highlights.append("Institutional accumulation")
-        if scores["sector"]["value"] > 60:
-            highlights.append("Outperforming Nifty 50")
-        if not highlights:
-            highlights = [f[:40] for f in bullish_factors[:2]] if bullish_factors else ["Consolidating structure"]
-
-        sector_name = m_context.get("sector", {}).get("sector_name", "General Market")
-
-        return TopOpportunityCard(
-            ticker=report["ticker"],
-            company_name=company_name,
-            current_price=quote["price"],
-            price_change_pct=quote["change_pct"],
-            overall_score=scores["overall_score"],
-            recommendation=scores["recommendation"],
-            confidence=scores["confidence"],
-            trend_direction="BULLISH" if scores["trend"]["value"] >= 50 else "BEARISH",
-            sector=sector_name,
-            top_bullish_factors=bullish_factors[:3],
-            top_bearish_factors=bearish_factors[:2],
-            key_highlights=highlights[:3]
+    if cached_data is not None:
+        # Serve the stale cache immediately while a fresh scan runs.
+        full = TopOpportunitiesResponse(**cached_data)
+        return TopOpportunitiesResponse(
+            updated_at=full.updated_at,
+            total_scanned=full.total_scanned,
+            opportunities=full.opportunities[:limit],
+            computing=True
         )
 
-    # Scanning the catalog sequentially (one full analysis pipeline call per
-    # stock - data download, indicators, patterns, prediction, and a news/
-    # intelligence fetch with its own multi-second timeout) reliably took
-    # long enough to exceed the platform's request timeout in production,
-    # so this endpoint effectively never completed. Running the catalog
-    # concurrently cuts wall-clock time by roughly the worker count since
-    # each stock's work is independent (different tickers, so no shared
-    # per-ticker cache file contention).
-    with ThreadPoolExecutor(max_workers=8) as executor:
-        future_to_ticker = {executor.submit(_scan_one, item): item["ticker"] for item in catalog}
-        for future in as_completed(future_to_ticker):
-            ticker = future_to_ticker[future]
-            try:
-                card = future.result()
-                scanned_count += 1
-                if card is not None:
-                    opportunity_cards.append(card)
-            except Exception as e:
-                logger.warning(f"Skipping {ticker} during opportunities scan: {e}")
-
-    # 2. Sort opportunities descending by overall score
-    opportunity_cards.sort(key=lambda c: c.overall_score, reverse=True)
-    
-    # Take top N limit
-    final_cards = opportunity_cards[:limit]
-
-    response = TopOpportunitiesResponse(
+    # No cache at all yet (first request since the process started).
+    return TopOpportunitiesResponse(
         updated_at=datetime.utcnow().isoformat(),
-        total_scanned=scanned_count,
-        opportunities=final_cards
+        total_scanned=0,
+        opportunities=[],
+        computing=True
     )
-
-    # 3. Store in the module-level cache for TOP_OPPORTUNITIES_TTL_SECONDS
-    _top_opportunities_cache["data"] = response.model_dump()
-    _top_opportunities_cache["timestamp"] = time.time()
-
-    return response
 
 
 @router.get("/overview", response_model=Dict[str, Any])
