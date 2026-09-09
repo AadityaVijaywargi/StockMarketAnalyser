@@ -215,9 +215,17 @@ def _run_deterministic_pipeline(
     market_downloader: MarketDownloader,
     interval: str = "1d",
     debug_mode: bool = False,
-    force_refresh: bool = False
+    force_refresh: bool = False,
+    skip_intelligence: bool = False
 ) -> Dict[str, Any]:
-    """Helper that runs the complete frozen deterministic pipeline for a stock."""
+    """Helper that runs the complete frozen deterministic pipeline for a stock.
+
+    skip_intelligence=True drops the market intelligence/news fetch (each
+    call has its own up-to-3.5s network timeout) - used by the top-opportunities
+    scan, which calls this once per stock in the catalog and doesn't need
+    per-stock news for a quick score-ranked list, unlike a single-ticker
+    /analyze call where that context matters.
+    """
     # Suffix safety append using TickerNormalizer
     from analysis.normalizer import TickerNormalizer
     processed_ticker = TickerNormalizer.normalize(ticker)
@@ -456,22 +464,25 @@ def _run_deterministic_pipeline(
     t_intel = time.time()
     logger.info(f"START Market Intelligence fetch for {processed_ticker}")
     intel_pack = None
-    try:
-        from api.deps import get_market_intelligence_engine
-        intel_engine = get_market_intelligence_engine()
-        intel_pack = intel_engine.get_intelligence_pack(
-            ticker=processed_ticker,
-            company_name=company_name,
-            sector_name=sector_name,
-            max_timeout_seconds=3.5
-        )
-        result["intelligence_pack"] = intel_pack.model_dump()
-        intel_time_ms = round((time.time() - t_intel) * 1000, 2)
-        timings["intelligence_pack_time_ms"] = intel_time_ms
-        logger.info(f"Market Intelligence fetch completed for {processed_ticker} ({intel_time_ms} ms)")
-    except Exception as intel_err:
-        intel_time_ms = round((time.time() - t_intel) * 1000, 2)
-        logger.warning(f"Failed to fetch market intelligence pack for {processed_ticker} ({intel_time_ms} ms): {intel_err}")
+    if skip_intelligence:
+        logger.info(f"Skipping market intelligence fetch for {processed_ticker} (skip_intelligence=True)")
+    else:
+        try:
+            from api.deps import get_market_intelligence_engine
+            intel_engine = get_market_intelligence_engine()
+            intel_pack = intel_engine.get_intelligence_pack(
+                ticker=processed_ticker,
+                company_name=company_name,
+                sector_name=sector_name,
+                max_timeout_seconds=3.5
+            )
+            result["intelligence_pack"] = intel_pack.model_dump()
+            intel_time_ms = round((time.time() - t_intel) * 1000, 2)
+            timings["intelligence_pack_time_ms"] = intel_time_ms
+            logger.info(f"Market Intelligence fetch completed for {processed_ticker} ({intel_time_ms} ms)")
+        except Exception as intel_err:
+            intel_time_ms = round((time.time() - t_intel) * 1000, 2)
+            logger.warning(f"Failed to fetch market intelligence pack for {processed_ticker} ({intel_time_ms} ms): {intel_err}")
 
     # Step 7.6: Unified Single Source of Truth Prediction & Recommendation Generation
     try:

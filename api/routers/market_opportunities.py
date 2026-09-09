@@ -27,6 +27,7 @@ logger = logging.getLogger("AIEquityResearchPlatform")
 router = APIRouter(prefix="/market", tags=["Market Opportunities"])
 
 TOP_OPPORTUNITIES_TTL_SECONDS = 900  # 15 minutes TTL
+SCAN_UNIVERSE_LIMIT = 20  # symbols.json's first 20 entries are large, liquid names
 
 # InMemoryLiveCache.get_analysis()/set_analysis() are keyed by (ticker,
 # interval) and consider a cached report fresh until a new candle for that
@@ -140,7 +141,15 @@ def get_top_opportunities(
 
     from api.routers.analysis import _run_deterministic_pipeline, fetch_live_quote
 
-    catalog = load_symbols_catalog()
+    # The ThreadPoolExecutor below only helps with this pipeline's I/O waits
+    # (data download, news fetch) - the indicator/pattern/scoring math is
+    # CPU-bound pandas/numpy work that stays serialized under Python's GIL,
+    # so more workers doesn't scale it the way it appeared to on a local
+    # multi-core dev machine. Confirmed live: the full 48-stock catalog
+    # still didn't complete within 40s+ on Render's free-tier CPU even with
+    # 8 workers. Capping the scanned universe directly cuts the CPU-bound
+    # work instead of assuming more threads will parallelize it away.
+    catalog = load_symbols_catalog()[:SCAN_UNIVERSE_LIMIT]
     scanned_count = 0
     opportunity_cards = []
 
@@ -148,7 +157,10 @@ def get_top_opportunities(
         ticker = item["ticker"]
         company_name = item.get("name", ticker)
 
-        # Execute pipeline (pulls from 24h file cache or downloads)
+        # Execute pipeline (pulls from 24h file cache or downloads).
+        # skip_intelligence=True: per-stock news fetch (up to 3.5s each) adds
+        # meaningfully to a 20-stock scan's wall-clock time and isn't needed
+        # for a quick score-ranked list - only /analyze/{ticker} needs it.
         report = _run_deterministic_pipeline(
             ticker=ticker,
             downloader=downloader,
@@ -158,7 +170,8 @@ def get_top_opportunities(
             feature_store=feature_store,
             scorer=scorer,
             market_downloader=market_downloader,
-            interval="1d"
+            interval="1d",
+            skip_intelligence=True
         )
 
         # Extract key details from report output
