@@ -1,16 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { Sidebar } from './components/Sidebar';
-import { LandingPage } from './pages/LandingPage';
-import { DashboardPage } from './pages/DashboardPage';
-import { WatchlistPage } from './pages/WatchlistPage';
-import { MarketOverviewPage } from './pages/MarketOverviewPage';
-import { PortfolioPage } from './pages/PortfolioPage';
-import { BacktestingPage } from './pages/BacktestingPage';
-import { SettingsPage } from './pages/SettingsPage';
-import { ChartPage } from './pages/ChartPage';
-import { ComparePage } from './pages/ComparePage';
-import { LoginPage } from './pages/LoginPage';
-import { SignupPage } from './pages/SignupPage';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { NotificationCenterSidebar } from './components/NotificationCenterSidebar';
@@ -19,6 +8,29 @@ import { DeterministicAnalysisReport } from './types';
 import { Loader2, AlertCircle, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Routes, Route, useNavigate, useParams, useSearchParams, useLocation, Navigate } from 'react-router-dom';
+
+// Route-level code splitting: each page (and everything it alone pulls in -
+// TechnicalChart+lightweight-charts for the chart pages, jsPDF for the
+// dashboard, etc.) only downloads when a user actually navigates there,
+// instead of all of it landing in one ~1.3MB initial bundle regardless of
+// which single page someone opens first.
+const LandingPage = lazy(() => import('./pages/LandingPage').then(m => ({ default: m.LandingPage })));
+const DashboardPage = lazy(() => import('./pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
+const WatchlistPage = lazy(() => import('./pages/WatchlistPage').then(m => ({ default: m.WatchlistPage })));
+const MarketOverviewPage = lazy(() => import('./pages/MarketOverviewPage').then(m => ({ default: m.MarketOverviewPage })));
+const PortfolioPage = lazy(() => import('./pages/PortfolioPage').then(m => ({ default: m.PortfolioPage })));
+const BacktestingPage = lazy(() => import('./pages/BacktestingPage').then(m => ({ default: m.BacktestingPage })));
+const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
+const ChartPage = lazy(() => import('./pages/ChartPage').then(m => ({ default: m.ChartPage })));
+const ComparePage = lazy(() => import('./pages/ComparePage').then(m => ({ default: m.ComparePage })));
+const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })));
+const SignupPage = lazy(() => import('./pages/SignupPage').then(m => ({ default: m.SignupPage })));
+
+const RouteLoadingFallback: React.FC = () => (
+  <div className="flex-1 min-h-screen flex items-center justify-center bg-background">
+    <Loader2 className="w-6 h-6 animate-spin text-brand" />
+  </div>
+);
 
 const saveToRecentSearches = (ticker: string) => {
   try {
@@ -246,10 +258,12 @@ export const App: React.FC = () => {
 
   if (isAuthRoute) {
     return (
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/signup" element={<SignupPage />} />
-      </Routes>
+      <Suspense fallback={<RouteLoadingFallback />}>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/signup" element={<SignupPage />} />
+        </Routes>
+      </Suspense>
     );
   }
 
@@ -285,6 +299,7 @@ export const App: React.FC = () => {
         </AnimatePresence>
 
         {/* Page Routing */}
+        <Suspense fallback={<RouteLoadingFallback />}>
         <Routes>
           <Route
             path="/"
@@ -354,6 +369,7 @@ export const App: React.FC = () => {
           {/* Catch-all fallback redirect */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </Suspense>
       </div>
 
       {/* 3. Persistent Right Notification Sidebar */}
