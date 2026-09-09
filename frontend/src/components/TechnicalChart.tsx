@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { createChart, ColorType, IChartApi, ISeriesApi, LineStyle, CrosshairMode } from 'lightweight-charts';
-import { ChartData, ChartStyle, DrawingToolType, DrawingObject, PredictionResult } from '../types';
+import { ChartData, ChartStyle, DrawingToolType, DrawingObject, PredictionResult, TradeSignal } from '../types';
 import { apiService } from '../services/api';
 import {
   Loader2, AlertCircle, RefreshCw, SlidersHorizontal,
@@ -26,6 +26,13 @@ interface TechnicalChartProps {
   chartData: ChartData;
   ticker?: string;
   prediction?: PredictionResult;
+  /** Real-time entry-zone/target/stop signal from TradeSignalPanel's engine.
+   * When present and actionable (BUY NOW or WAIT, which are the only
+   * signals carrying a populated entry zone), drawn as a shaded band
+   * showing exactly where to buy - the AI Targets toggle previously only
+   * showed a single target/stop line pair from the separate horizon
+   * prediction, with no visual answer to "where do I actually enter". */
+  tradeSignal?: TradeSignal;
   activeTimeframe?: string;
   onTimeframeChange?: (tf: string) => void;
   /** Main pane height in px. Defaults to the compact dashboard-embedded
@@ -79,6 +86,7 @@ export const TechnicalChart: React.FC<TechnicalChartProps> = ({
   chartData: propChartData,
   ticker = 'RELIANCE.NS',
   prediction,
+  tradeSignal,
   activeTimeframe: propActiveTimeframe,
   onTimeframeChange,
   mainHeight,
@@ -112,6 +120,11 @@ export const TechnicalChart: React.FC<TechnicalChartProps> = ({
   // the chart down and the trailing-bar patch effect requires an existing
   // chart to patch.
   const chartDataSignature = `${currentChartData?.dates?.length ?? 0}_${currentChartData?.dates?.[0] ?? ''}_${currentChartData?.dates?.[currentChartData.dates.length - 1] ?? ''}`;
+
+  // Same rebuild-avoidance reasoning as chartDataSignature above, applied to
+  // the two overlay-relevant objects that come in as fresh references on
+  // every parent poll tick even when their values haven't actually changed.
+  const overlaySignature = `${prediction?.target_price ?? ''}_${prediction?.stop_loss ?? ''}_${tradeSignal?.signal ?? ''}_${tradeSignal?.entry_zone_low ?? ''}_${tradeSignal?.entry_zone_high ?? ''}`;
 
   useEffect(() => {
     // propChartData is always the parent's daily ("1D") analysis payload - it
@@ -511,6 +524,30 @@ export const TechnicalChart: React.FC<TechnicalChartProps> = ({
       }
     }
 
+    // Entry Zone (where to actually buy) from the live trade-signal engine -
+    // only BUY_NOW and WAIT signals carry a populated entry zone (the
+    // backend nulls it out for SELL_NOW/AVOID/HOLDING states), so this only
+    // draws when there's a real zone to show.
+    if (showAiOverlays && tradeSignal && tradeSignal.entry_zone_low && tradeSignal.entry_zone_high) {
+      const zoneColor = tradeSignal.signal === 'BUY NOW' ? '#22d3ee' : '#94a3b8';
+      mainSeries.createPriceLine({
+        price: tradeSignal.entry_zone_high,
+        color: zoneColor,
+        lineWidth: 1,
+        lineStyle: LineStyle.Dotted,
+        axisLabelVisible: true,
+        title: `Entry Zone High ₹${tradeSignal.entry_zone_high}`,
+      });
+      mainSeries.createPriceLine({
+        price: tradeSignal.entry_zone_low,
+        color: zoneColor,
+        lineWidth: 1,
+        lineStyle: LineStyle.Dotted,
+        axisLabelVisible: true,
+        title: `${tradeSignal.signal === 'BUY NOW' ? 'BUY ZONE' : 'Entry Zone Low'} ₹${tradeSignal.entry_zone_low}`,
+      });
+    }
+
     // Event Markers
     if (showEventMarkers && candlePoints.length > 5) {
       const lastIndex = candlePoints.length - 1;
@@ -764,7 +801,7 @@ export const TechnicalChart: React.FC<TechnicalChartProps> = ({
     // currentChartData intentionally excluded: trailing-bar updates from quote
     // polling are handled by the data-sync effect above without a full rebuild.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ticker, activeTimeframe, chartDataSignature, indicators, chartStyle, showAiOverlays, showEventMarkers, drawings, activeDrawingTool, mainHeight, wheelZoomEnabled]);
+  }, [ticker, activeTimeframe, chartDataSignature, indicators, chartStyle, showAiOverlays, showEventMarkers, drawings, activeDrawingTool, mainHeight, wheelZoomEnabled, overlaySignature]);
 
   return (
     <div className="bg-surface border border-borderDark p-5 rounded-2xl flex flex-col gap-4 font-sans shadow-xl">

@@ -198,6 +198,7 @@ export const ChartPage: React.FC = () => {
               chartData={report.chart_data}
               ticker={ticker}
               prediction={report.prediction}
+              tradeSignal={report.trade_signal}
               activeTimeframe={activeTimeframe}
               onTimeframeChange={handleTimeframeChange}
               mainHeight={chartHeight}

@@ -302,6 +302,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           <TechnicalChart
             chartData={activeReport.chart_data}
             ticker={activeReport.ticker}
+            prediction={prediction || activeReport.prediction}
+            tradeSignal={activeReport.trade_signal}
             activeTimeframe={activeTimeframe}
             onTimeframeChange={handleTimeframeChange}
             wheelZoomEnabled={false}
