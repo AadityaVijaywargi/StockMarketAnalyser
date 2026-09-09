@@ -13,6 +13,7 @@ export const TopOpportunitiesSection: React.FC<TopOpportunitiesSectionProps> = (
   const [opportunities, setOpportunities] = useState<TopOpportunityCard[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+  const [isComputing, setIsComputing] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
   // Filters state
@@ -28,6 +29,7 @@ export const TopOpportunitiesSection: React.FC<TopOpportunitiesSectionProps> = (
     try {
       const data = await apiService.getTopOpportunities(12, forceRefresh);
       setOpportunities(data.opportunities || []);
+      setIsComputing(!!data.computing);
     } catch (err: any) {
       console.error("Failed to load top opportunities:", err);
       setError("Unable to load top market opportunities right now.");
@@ -37,9 +39,31 @@ export const TopOpportunitiesSection: React.FC<TopOpportunitiesSectionProps> = (
     }
   };
 
+  // Silent poll - used while a background scan is in flight, so it
+  // shouldn't flip the skeleton-loader or refresh-spinner states.
+  const pollOpportunities = async () => {
+    try {
+      const data = await apiService.getTopOpportunities(12, false);
+      setOpportunities(data.opportunities || []);
+      setIsComputing(!!data.computing);
+    } catch {
+      // Stay quiet - the next poll (or a manual refresh) will retry.
+    }
+  };
+
   useEffect(() => {
     fetchOpportunities();
   }, []);
+
+  // The scan now runs in the background on the server (a synchronous
+  // request used to reliably time out) - while `computing` comes back
+  // true, poll every few seconds so the feed fills in as soon as the
+  // server-side scan finishes, without the user needing to hit Refresh.
+  useEffect(() => {
+    if (!isComputing) return;
+    const timer = setTimeout(pollOpportunities, 5000);
+    return () => clearTimeout(timer);
+  }, [isComputing]);
 
   // Filter logic
   const filteredCards = opportunities.filter(card => {
@@ -143,6 +167,17 @@ export const TopOpportunitiesSection: React.FC<TopOpportunitiesSectionProps> = (
           >
             Retry Fetching Opportunities
           </button>
+        </div>
+      ) : opportunities.length === 0 && isComputing ? (
+        /* First-ever scan still running in the background on the server -
+           distinct from "genuinely found nothing" below, since that would
+           otherwise look like a real (if unlikely) result. */
+        <div className="p-12 rounded-2xl bg-surface/50 border border-borderDark/60 text-center flex flex-col items-center justify-center gap-3">
+          <RefreshCw className="w-10 h-10 text-brand animate-spin" />
+          <h4 className="text-base font-bold text-white">Scanning the market...</h4>
+          <p className="text-xs text-textMuted max-w-md">
+            First scan of the session - this refreshes automatically in a few seconds.
+          </p>
         </div>
       ) : filteredCards.length === 0 ? (
         /* Empty State Fallback */

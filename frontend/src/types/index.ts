@@ -366,6 +366,7 @@ export interface TopOpportunitiesResponse {
   updated_at: string;
   total_scanned: number;
   opportunities: TopOpportunityCard[];
+  computing?: boolean;
 }
 
 export interface WatchlistItem {
