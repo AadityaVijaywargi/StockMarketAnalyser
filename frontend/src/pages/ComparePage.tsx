@@ -1,4 +1,5 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { DeterministicAnalysisReport } from '../types';
 import { apiService } from '../services/api';
 import { SearchBar } from '../components/search/SearchBar';
@@ -45,6 +46,17 @@ export const ComparePage: React.FC = () => {
       setSlots(prev => prev.map(s => s.ticker.toUpperCase() === ticker ? { ...s, isLoading: false, error: detail } : s));
     }
   }, []);
+
+  // Supports "Compare Selected" from the watchlist: /compare?tickers=A.NS,B.NS
+  const [searchParams] = useSearchParams();
+  const prefillHandled = useRef(false);
+  useEffect(() => {
+    if (prefillHandled.current) return;
+    const raw = searchParams.get('tickers');
+    if (!raw) return;
+    prefillHandled.current = true;
+    raw.split(',').map(t => t.trim()).filter(Boolean).slice(0, MAX_COMPARE).forEach(addTicker);
+  }, [searchParams, addTicker]);
 
   const removeTicker = (ticker: string) => {
     setSlots(prev => prev.filter(s => s.ticker !== ticker));

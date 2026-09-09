@@ -21,7 +21,7 @@ export const OpportunityCard: React.FC<OpportunityCardProps> = ({ card, onClick 
 
   const handleToggleFavorite = (e: React.MouseEvent) => {
     e.stopPropagation();
-    toggleFavorite(card.ticker, card.company_name);
+    toggleFavorite(card.ticker, card.company_name, currentPrice);
   };
   
   // Recommendation colors

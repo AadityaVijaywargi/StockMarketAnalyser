@@ -6,10 +6,14 @@ import { watchlistMonitorService } from '../services/watchlist_monitor_service';
 interface WatchlistContextType {
   watchlist: WatchlistItem[];
   isFavorite: (ticker: string) => boolean;
-  toggleFavorite: (ticker: string, companyName?: string) => void;
-  addStock: (ticker: string, companyName?: string) => void;
+  toggleFavorite: (ticker: string, companyName?: string, currentPrice?: number) => void;
+  addStock: (ticker: string, companyName?: string, currentPrice?: number) => void;
   removeStock: (ticker: string) => void;
   clearWatchlist: () => void;
+  togglePin: (ticker: string) => void;
+  updateNotes: (ticker: string, notes: string) => void;
+  addTag: (ticker: string, tag: string) => void;
+  removeTag: (ticker: string, tag: string) => void;
   getMonitorHealth: () => MonitorHealthMetrics;
 }
 
@@ -38,12 +42,12 @@ export const WatchlistProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     return watchlist.some(item => item.ticker.toUpperCase() === clean || item.id.toUpperCase() === clean);
   };
 
-  const toggleFavorite = (ticker: string, companyName?: string) => {
-    watchlistService.toggleFavorite(ticker, companyName);
+  const toggleFavorite = (ticker: string, companyName?: string, currentPrice?: number) => {
+    watchlistService.toggleFavorite(ticker, companyName, currentPrice);
   };
 
-  const addStock = (ticker: string, companyName?: string) => {
-    watchlistService.addStock(ticker, companyName);
+  const addStock = (ticker: string, companyName?: string, currentPrice?: number) => {
+    watchlistService.addStock(ticker, companyName, currentPrice);
   };
 
   const removeStock = (ticker: string) => {
@@ -52,6 +56,22 @@ export const WatchlistProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const clearWatchlist = () => {
     watchlistService.clearWatchlist();
+  };
+
+  const togglePin = (ticker: string) => {
+    watchlistService.togglePin(ticker);
+  };
+
+  const updateNotes = (ticker: string, notes: string) => {
+    watchlistService.updateNotes(ticker, notes);
+  };
+
+  const addTag = (ticker: string, tag: string) => {
+    watchlistService.addTag(ticker, tag);
+  };
+
+  const removeTag = (ticker: string, tag: string) => {
+    watchlistService.removeTag(ticker, tag);
   };
 
   return (
@@ -63,6 +83,10 @@ export const WatchlistProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         addStock,
         removeStock,
         clearWatchlist,
+        togglePin,
+        updateNotes,
+        addTag,
+        removeTag,
         getMonitorHealth: () => watchlistMonitorService.getHealthMetrics(),
       }}
     >

@@ -382,6 +382,10 @@ export interface WatchlistItem {
   price_target?: number;
   portfolio_quantity?: number;
   average_buy_price?: number;
+  /** Price at the moment the stock was added to the watchlist, when known
+   * (the caller has to supply it - not every add site has a live price
+   * handy). Powers "performance since watched" in the watchlist table. */
+  price_at_add?: number;
 }
 
 export type NotificationSeverity = 'INFO' | 'WARNING' | 'IMPORTANT';

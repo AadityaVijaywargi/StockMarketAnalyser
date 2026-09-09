@@ -129,7 +129,7 @@ export const ChartPage: React.FC = () => {
           <h1 className="font-bold text-base sm:text-lg text-white font-mono">{report?.company_name || ticker.split('.')[0]}</h1>
           <span className="text-[10px] text-textMuted font-mono">{ticker}</span>
           <button
-            onClick={() => toggleFavorite(ticker, report?.company_name || ticker)}
+            onClick={() => toggleFavorite(ticker, report?.company_name || ticker, lastPrice)}
             aria-label={favorite ? 'Remove from watchlist' : 'Add to watchlist'}
             className="text-textMuted hover:text-amber-400 transition-colors"
           >

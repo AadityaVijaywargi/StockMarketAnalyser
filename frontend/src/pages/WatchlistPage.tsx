@@ -1,23 +1,34 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Star, Search, Trash2, ArrowUpDown, Clock, TrendingUp, TrendingDown, ChevronRight, Activity, ExternalLink, X } from 'lucide-react';
-import { WatchlistItem, LiveQuote, PredictionResult, PredictionTrend } from '../types';
+import {
+  Star, Search, Trash2, ArrowUpDown, Clock, TrendingUp, TrendingDown, ChevronRight,
+  ExternalLink, X, Pin, StickyNote, Tag as TagIcon, Bell, Plus, GitCompare, CheckSquare, Square
+} from 'lucide-react';
+import { WatchlistItem } from '../types';
 import { useWatchlist } from '../context/WatchlistContext';
 import { watchlistMonitorService, WATCHLIST_MONITOR_UPDATED_EVENT } from '../services/watchlist_monitor_service';
+import { priceAlertsService } from '../services/price_alerts_service';
 import { TopNavbar } from '../components/TopNavbar';
 import { TechnicalChart } from '../components/TechnicalChart';
 import { motion, AnimatePresence } from 'framer-motion';
 
-type SortOption = 'insertion' | 'alphabetical' | 'price' | 'change' | 'recommendation' | 'confidence' | 'newest' | 'oldest';
+type SortOption = 'insertion' | 'alphabetical' | 'price' | 'change' | 'recommendation' | 'confidence' | 'newest' | 'oldest' | 'performance';
 
 export const WatchlistPage: React.FC<{ onSearch: (ticker: string) => void; isLoading: boolean }> = ({ onSearch, isLoading }) => {
   const navigate = useNavigate();
-  const { watchlist: items, toggleFavorite, clearWatchlist, getMonitorHealth } = useWatchlist();
+  const { watchlist: items, toggleFavorite, clearWatchlist, togglePin, updateNotes, addTag, removeTag, getMonitorHealth } = useWatchlist();
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [sortBy, setSortBy] = useState<SortOption>('insertion');
   const [monitoredData, setMonitoredData] = useState<Record<string, any>>({});
   const [showClearModal, setShowClearModal] = useState<boolean>(false);
   const [selectedInlineTicker, setSelectedInlineTicker] = useState<string | null>(null);
+  const [selectedTickers, setSelectedTickers] = useState<Set<string>>(new Set());
+  const [editingNotesTicker, setEditingNotesTicker] = useState<string | null>(null);
+  const [notesDraft, setNotesDraft] = useState<string>('');
+  const [tagInputTicker, setTagInputTicker] = useState<string | null>(null);
+  const [tagDraft, setTagDraft] = useState<string>('');
+  const [quickAlertTicker, setQuickAlertTicker] = useState<string | null>(null);
+  const [quickAlertPrice, setQuickAlertPrice] = useState<string>('');
 
   // Subscribe to background WatchlistMonitorService updates
   useEffect(() => {
@@ -46,16 +57,92 @@ export const WatchlistPage: React.FC<{ onSearch: (ticker: string) => void; isLoa
     toggleFavorite(ticker);
   };
 
+  const handleTogglePin = (e: React.MouseEvent, ticker: string) => {
+    e.stopPropagation();
+    togglePin(ticker);
+  };
+
+  const handleToggleSelect = (e: React.MouseEvent, ticker: string) => {
+    e.stopPropagation();
+    setSelectedTickers(prev => {
+      const next = new Set(prev);
+      if (next.has(ticker)) next.delete(ticker);
+      else next.add(ticker);
+      return next;
+    });
+  };
+
+  const handleRemoveSelected = () => {
+    selectedTickers.forEach(t => toggleFavorite(t));
+    setSelectedTickers(new Set());
+  };
+
+  const handleCompareSelected = () => {
+    const tickers = Array.from(selectedTickers).slice(0, 4);
+    navigate(`/compare?tickers=${tickers.join(',')}`);
+  };
+
+  const openNotesEditor = (e: React.MouseEvent, item: WatchlistItem) => {
+    e.stopPropagation();
+    setEditingNotesTicker(item.ticker);
+    setNotesDraft(item.notes || '');
+  };
+
+  const saveNotes = (ticker: string) => {
+    updateNotes(ticker, notesDraft);
+    setEditingNotesTicker(null);
+  };
+
+  const openTagInput = (e: React.MouseEvent, ticker: string) => {
+    e.stopPropagation();
+    setTagInputTicker(ticker);
+    setTagDraft('');
+  };
+
+  const submitTag = (ticker: string) => {
+    if (tagDraft.trim()) addTag(ticker, tagDraft.trim());
+    setTagDraft('');
+    setTagInputTicker(null);
+  };
+
+  const openQuickAlert = (e: React.MouseEvent, ticker: string) => {
+    e.stopPropagation();
+    setQuickAlertTicker(ticker);
+    setQuickAlertPrice('');
+  };
+
+  const submitQuickAlert = (item: WatchlistItem) => {
+    const price = parseFloat(quickAlertPrice);
+    const cleanTicker = item.ticker.toUpperCase().trim();
+    const currentPrice = monitoredData[cleanTicker]?.quote?.price;
+    if (price > 0) {
+      const direction = currentPrice ? (price >= currentPrice ? 'above' : 'below') : 'above';
+      priceAlertsService.addAlert(item.ticker, item.company_name, price, direction);
+    }
+    setQuickAlertTicker(null);
+  };
+
   const filteredItems = items.filter(item => {
     const q = searchQuery.toLowerCase().trim();
     if (!q) return true;
     return (
       item.ticker.toLowerCase().includes(q) ||
-      (item.company_name && item.company_name.toLowerCase().includes(q))
+      (item.company_name && item.company_name.toLowerCase().includes(q)) ||
+      (item.tags || []).some(t => t.toLowerCase().includes(q))
     );
   });
 
+  const performancePct = (item: WatchlistItem): number | null => {
+    const cleanTicker = item.ticker.toUpperCase().trim();
+    const currentPrice = monitoredData[cleanTicker]?.quote?.price;
+    if (!item.price_at_add || !currentPrice) return null;
+    return ((currentPrice - item.price_at_add) / item.price_at_add) * 100;
+  };
+
   const sortedItems = [...filteredItems].sort((a, b) => {
+    // Pinned items always float to the top regardless of the active sort.
+    if (!!a.pinned !== !!b.pinned) return a.pinned ? -1 : 1;
+
     const cleanA = a.ticker.toUpperCase().trim();
     const cleanB = b.ticker.toUpperCase().trim();
     const monA = monitoredData[cleanA];
@@ -69,6 +156,14 @@ export const WatchlistPage: React.FC<{ onSearch: (ticker: string) => void; isLoa
     }
     if (sortBy === 'change') {
       return (monB?.quote?.change_pct || 0) - (monA?.quote?.change_pct || 0);
+    }
+    if (sortBy === 'performance') {
+      const pA = performancePct(a);
+      const pB = performancePct(b);
+      if (pA === null && pB === null) return 0;
+      if (pA === null) return 1;
+      if (pB === null) return -1;
+      return pB - pA;
     }
     if (sortBy === 'recommendation') {
       return (monB?.probability || 50) - (monA?.probability || 50);
@@ -128,7 +223,7 @@ export const WatchlistPage: React.FC<{ onSearch: (ticker: string) => void; isLoa
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-textMuted" />
             <input
               type="text"
-              placeholder="Search watchlist..."
+              placeholder="Search watchlist, or by tag..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               className="w-full bg-background border border-borderDark rounded-xl pl-10 pr-4 py-2 text-xs text-white placeholder-textMuted focus:outline-none focus:border-brand transition-all"
@@ -149,6 +244,7 @@ export const WatchlistPage: React.FC<{ onSearch: (ticker: string) => void; isLoa
                   <option value="alphabetical" className="bg-surface text-white">Alphabetical (A-Z)</option>
                   <option value="price" className="bg-surface text-white">Highest Price</option>
                   <option value="change" className="bg-surface text-white">Daily Change %</option>
+                  <option value="performance" className="bg-surface text-white">Performance Since Watched</option>
                   <option value="recommendation" className="bg-surface text-white">Highest Probability</option>
                   <option value="confidence" className="bg-surface text-white">Highest Confidence</option>
                   <option value="newest" className="bg-surface text-white">Newest Added</option>
@@ -165,6 +261,43 @@ export const WatchlistPage: React.FC<{ onSearch: (ticker: string) => void; isLoa
             </div>
           )}
         </div>
+
+        {/* Bulk Selection Toolbar */}
+        <AnimatePresence>
+          {selectedTickers.size > 0 && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="flex items-center justify-between gap-4 bg-brand/10 border border-brand/30 px-4 py-3 rounded-2xl overflow-hidden"
+            >
+              <span className="text-xs font-mono font-bold text-brand">{selectedTickers.size} selected</span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleCompareSelected}
+                  disabled={selectedTickers.size < 2}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand text-black text-xs font-mono font-bold hover:brightness-110 disabled:opacity-40 disabled:pointer-events-none transition-all"
+                >
+                  <GitCompare className="w-3.5 h-3.5" />
+                  <span>Compare Selected</span>
+                </button>
+                <button
+                  onClick={handleRemoveSelected}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-bearish/10 border border-bearish/30 text-bearish text-xs font-mono font-bold hover:bg-bearish/20 transition-all"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Remove Selected</span>
+                </button>
+                <button
+                  onClick={() => setSelectedTickers(new Set())}
+                  className="p-1.5 rounded-lg text-textMuted hover:text-white transition-all"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {items.length === 0 ? (
           <div className="bg-surface/50 border border-borderDark/60 rounded-2xl p-12 flex flex-col items-center justify-center text-center gap-4 my-8">
@@ -188,14 +321,18 @@ export const WatchlistPage: React.FC<{ onSearch: (ticker: string) => void; isLoa
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-background/80 border-b border-borderDark/60 text-[11px] font-mono text-textMuted uppercase tracking-wider">
+                    <th className="py-3.5 px-3 w-10"></th>
+                    <th className="py-3.5 px-2 w-10 text-center">Pin</th>
                     <th className="py-3.5 px-4 w-12 text-center">Fav</th>
                     <th className="py-3.5 px-4">Company & Ticker</th>
                     <th className="py-3.5 px-4 text-right">Current Price</th>
                     <th className="py-3.5 px-4 text-right">24h Change</th>
+                    <th className="py-3.5 px-4 text-right">Since Watched</th>
                     <th className="py-3.5 px-4 text-center">Recommendation & Intelligence</th>
                     <th className="py-3.5 px-4 text-right">Target / Stop</th>
                     <th className="py-3.5 px-4 text-center">Prediction Trend</th>
-                    <th className="py-3.5 px-4 text-center">Last Refreshed</th>
+                    <th className="py-3.5 px-4 text-center">Notes / Tags</th>
+                    <th className="py-3.5 px-4 text-center w-12">Alert</th>
                     <th className="py-3.5 px-4 w-12"></th>
                   </tr>
                 </thead>
@@ -207,13 +344,14 @@ export const WatchlistPage: React.FC<{ onSearch: (ticker: string) => void; isLoa
                     const price = quote?.price;
                     const changePct = quote?.change_pct;
                     const isPositive = (changePct ?? 0) >= 0;
-                    
+                    const perf = performancePct(item);
+
                     const rec = monState?.recommendation || 'HOLD';
                     const conf = monState?.confidence;
                     const target = monState?.targetPrice;
                     const stop = monState?.stopLoss;
                     const trend = monState?.predictionTrend || 'Stable';
-                    const lastUpdated = monState?.lastUpdated || 'Pending...';
+                    const isSelected = selectedTickers.has(item.ticker);
 
                     const recColors: Record<string, string> = {
                       'STRONG BUY': 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40 font-bold',
@@ -235,8 +373,21 @@ export const WatchlistPage: React.FC<{ onSearch: (ticker: string) => void; isLoa
                       <tr
                         key={item.id}
                         onClick={() => handleRowClick(item.ticker)}
-                        className="hover:bg-white/[0.03] cursor-pointer transition-colors group"
+                        className={`hover:bg-white/[0.03] cursor-pointer transition-colors group ${isSelected ? 'bg-brand/5' : ''} ${item.pinned ? 'bg-amber-500/[0.03]' : ''}`}
                       >
+                        <td className="py-4 px-3 text-center" onClick={e => handleToggleSelect(e, item.ticker)}>
+                          <button className="text-textMuted hover:text-brand transition-colors">
+                            {isSelected ? <CheckSquare className="w-4 h-4 text-brand" /> : <Square className="w-4 h-4" />}
+                          </button>
+                        </td>
+                        <td className="py-4 px-2 text-center" onClick={e => handleTogglePin(e, item.ticker)}>
+                          <button
+                            className={`transition-all hover:scale-110 ${item.pinned ? 'text-amber-400' : 'text-textMuted hover:text-amber-400 opacity-0 group-hover:opacity-100'}`}
+                            title={item.pinned ? 'Unpin' : 'Pin to top'}
+                          >
+                            <Pin className={`w-3.5 h-3.5 ${item.pinned ? 'fill-amber-400' : ''}`} />
+                          </button>
+                        </td>
                         <td className="py-4 px-4 text-center" onClick={e => handleToggleStar(e, item.ticker)}>
                           <button className="text-yellow-400 hover:scale-110 transition-transform">
                             <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
@@ -259,6 +410,13 @@ export const WatchlistPage: React.FC<{ onSearch: (ticker: string) => void; isLoa
                             </span>
                           ) : <span className="text-textMuted">--</span>}
                         </td>
+                        <td className="py-4 px-4 text-right font-mono">
+                          {perf !== null ? (
+                            <span className={`font-semibold ${perf >= 0 ? 'text-bullish' : 'text-bearish'}`}>
+                              {perf >= 0 ? '+' : ''}{perf.toFixed(2)}%
+                            </span>
+                          ) : <span className="text-textMuted" title="Added before this feature, or price unavailable">--</span>}
+                        </td>
                         <td className="py-4 px-4 text-center">
                           <span className={`text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full border uppercase tracking-wider ${recColors[rec] || recColors.HOLD}`}>
                             {rec} {conf ? `(${conf}%)` : ''}
@@ -277,11 +435,84 @@ export const WatchlistPage: React.FC<{ onSearch: (ticker: string) => void; isLoa
                             {trend === 'Improving' ? '📈 Improving' : trend === 'Weakening' ? '📉 Weakening' : '➡️ Stable'}
                           </span>
                         </td>
-                        <td className="py-4 px-4 text-center font-mono text-[10px] text-textMuted">
-                          <div className="flex items-center justify-center gap-1">
-                            <Clock className="w-3 h-3 text-textMuted" />
-                            <span>{lastUpdated}</span>
+                        <td className="py-4 px-4" onClick={e => e.stopPropagation()}>
+                          <div className="flex flex-col items-center gap-1.5 min-w-[140px]">
+                            {editingNotesTicker === item.ticker ? (
+                              <div className="flex items-center gap-1 w-full">
+                                <input
+                                  autoFocus
+                                  value={notesDraft}
+                                  onChange={e => setNotesDraft(e.target.value)}
+                                  onKeyDown={e => e.key === 'Enter' && saveNotes(item.ticker)}
+                                  onBlur={() => saveNotes(item.ticker)}
+                                  placeholder="Add a note..."
+                                  className="flex-1 min-w-0 px-2 py-1 rounded-md bg-background border border-brand/40 text-[11px] text-white outline-none"
+                                />
+                              </div>
+                            ) : (
+                              <button
+                                onClick={e => openNotesEditor(e, item)}
+                                className="flex items-center gap-1 text-[11px] text-textMuted hover:text-white transition-colors max-w-[140px]"
+                                title={item.notes || 'Add a note'}
+                              >
+                                <StickyNote className={`w-3 h-3 shrink-0 ${item.notes ? 'text-brand' : ''}`} />
+                                <span className="truncate">{item.notes || 'Add note'}</span>
+                              </button>
+                            )}
+
+                            <div className="flex flex-wrap items-center gap-1 justify-center">
+                              {(item.tags || []).map(tag => (
+                                <span key={tag} className="flex items-center gap-1 text-[9px] font-mono bg-brand/10 text-brand border border-brand/20 px-1.5 py-0.5 rounded-full">
+                                  {tag}
+                                  <button onClick={() => removeTag(item.ticker, tag)} className="hover:text-white">
+                                    <X className="w-2.5 h-2.5" />
+                                  </button>
+                                </span>
+                              ))}
+                              {tagInputTicker === item.ticker ? (
+                                <input
+                                  autoFocus
+                                  value={tagDraft}
+                                  onChange={e => setTagDraft(e.target.value)}
+                                  onKeyDown={e => e.key === 'Enter' && submitTag(item.ticker)}
+                                  onBlur={() => submitTag(item.ticker)}
+                                  placeholder="tag"
+                                  className="w-14 px-1.5 py-0.5 rounded-full bg-background border border-brand/40 text-[9px] text-white outline-none"
+                                />
+                              ) : (
+                                <button
+                                  onClick={e => openTagInput(e, item.ticker)}
+                                  className="flex items-center gap-0.5 text-[9px] font-mono text-textMuted hover:text-brand border border-borderDark hover:border-brand/40 px-1.5 py-0.5 rounded-full transition-colors"
+                                >
+                                  <TagIcon className="w-2.5 h-2.5" /><Plus className="w-2 h-2" />
+                                </button>
+                              )}
+                            </div>
                           </div>
+                        </td>
+                        <td className="py-4 px-4 text-center" onClick={e => e.stopPropagation()}>
+                          {quickAlertTicker === item.ticker ? (
+                            <div className="flex items-center gap-1">
+                              <input
+                                autoFocus
+                                type="number"
+                                value={quickAlertPrice}
+                                onChange={e => setQuickAlertPrice(e.target.value)}
+                                onKeyDown={e => e.key === 'Enter' && submitQuickAlert(item)}
+                                onBlur={() => submitQuickAlert(item)}
+                                placeholder={price ? price.toFixed(0) : 'price'}
+                                className="w-16 px-1.5 py-1 rounded-md bg-background border border-brand/40 text-[11px] text-white outline-none"
+                              />
+                            </div>
+                          ) : (
+                            <button
+                              onClick={e => openQuickAlert(e, item.ticker)}
+                              className="text-textMuted hover:text-brand transition-colors"
+                              title="Set a price alert"
+                            >
+                              <Bell className="w-3.5 h-3.5" />
+                            </button>
+                          )}
                         </td>
                         <td className="py-4 px-4 text-right">
                           <ChevronRight className="w-4 h-4 text-textMuted group-hover:text-white group-hover:translate-x-1 transition-all" />

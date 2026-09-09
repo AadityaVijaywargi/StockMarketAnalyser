@@ -41,7 +41,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
 
   const handleToggleFavorite = (e: React.MouseEvent) => {
     e.stopPropagation();
-    toggleFavorite(report.ticker, report.company_name);
+    toggleFavorite(report.ticker, report.company_name, currentPrice);
   };
 
   // Timeframe chart dataset state

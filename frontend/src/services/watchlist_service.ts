@@ -88,6 +88,7 @@ export class WatchlistService {
             pinned: Boolean(item.pinned),
             notes: item.notes || '',
             tags: item.tags || [],
+            price_at_add: typeof item.price_at_add === 'number' ? item.price_at_add : undefined,
           };
         });
       }
@@ -108,9 +109,10 @@ export class WatchlistService {
   }
 
   /**
-   * Adds a stock to the watchlist without duplicates
+   * Adds a stock to the watchlist without duplicates. priceAtAdd, when the
+   * caller has a live price handy, seeds "performance since watched".
    */
-  addStock(ticker: string, companyName?: string): WatchlistItem[] {
+  addStock(ticker: string, companyName?: string, priceAtAdd?: number): WatchlistItem[] {
     if (!ticker) return this.getWatchlist();
     const cleanTicker = ticker.toUpperCase().trim();
     const normalizedTicker = cleanTicker.endsWith('.NS') || cleanTicker.endsWith('.BO') ? cleanTicker : `${cleanTicker}.NS`;
@@ -128,6 +130,7 @@ export class WatchlistService {
         pinned: false,
         notes: '',
         tags: [],
+        price_at_add: priceAtAdd,
       };
       const updated = [...current, newItem];
       this.storage.setItem(this.storageKey, JSON.stringify(updated));
@@ -135,6 +138,46 @@ export class WatchlistService {
       return updated;
     }
     return current;
+  }
+
+  private updateItem(ticker: string, patch: Partial<WatchlistItem>): WatchlistItem[] {
+    const cleanTicker = ticker.toUpperCase().trim();
+    const current = this.getWatchlist();
+    const updated = current.map(item =>
+      item.ticker.toUpperCase() === cleanTicker || item.id.toUpperCase() === cleanTicker
+        ? { ...item, ...patch }
+        : item
+    );
+    this.storage.setItem(this.storageKey, JSON.stringify(updated));
+    this.notifyListeners();
+    return updated;
+  }
+
+  togglePin(ticker: string): WatchlistItem[] {
+    const current = this.getWatchlist();
+    const item = current.find(i => i.ticker.toUpperCase() === ticker.toUpperCase().trim() || i.id.toUpperCase() === ticker.toUpperCase().trim());
+    return this.updateItem(ticker, { pinned: !item?.pinned });
+  }
+
+  updateNotes(ticker: string, notes: string): WatchlistItem[] {
+    return this.updateItem(ticker, { notes });
+  }
+
+  addTag(ticker: string, tag: string): WatchlistItem[] {
+    const clean = tag.trim();
+    if (!clean) return this.getWatchlist();
+    const current = this.getWatchlist();
+    const item = current.find(i => i.ticker.toUpperCase() === ticker.toUpperCase().trim() || i.id.toUpperCase() === ticker.toUpperCase().trim());
+    const existingTags = item?.tags || [];
+    if (existingTags.some(t => t.toLowerCase() === clean.toLowerCase())) return current;
+    return this.updateItem(ticker, { tags: [...existingTags, clean] });
+  }
+
+  removeTag(ticker: string, tag: string): WatchlistItem[] {
+    const current = this.getWatchlist();
+    const item = current.find(i => i.ticker.toUpperCase() === ticker.toUpperCase().trim() || i.id.toUpperCase() === ticker.toUpperCase().trim());
+    const existingTags = item?.tags || [];
+    return this.updateItem(ticker, { tags: existingTags.filter(t => t !== tag) });
   }
 
   /**
@@ -156,13 +199,13 @@ export class WatchlistService {
   /**
    * Toggles favorite status for a stock
    */
-  toggleFavorite(ticker: string, companyName?: string): { isFavorite: boolean; items: WatchlistItem[] } {
+  toggleFavorite(ticker: string, companyName?: string, currentPrice?: number): { isFavorite: boolean; items: WatchlistItem[] } {
     const currentlyFav = this.isFavorite(ticker);
     if (currentlyFav) {
       const items = this.removeStock(ticker);
       return { isFavorite: false, items };
     } else {
-      const items = this.addStock(ticker, companyName);
+      const items = this.addStock(ticker, companyName, currentPrice);
       return { isFavorite: true, items };
     }
   }
