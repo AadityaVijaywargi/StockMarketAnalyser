@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Settings as SettingsIcon, Bell, Target, Trash2, AlertTriangle, CheckCircle2, Info, LogOut, UserCircle2, Ticket, Copy, Check, XCircle, Mail, Send } from 'lucide-react';
+import { Settings as SettingsIcon, Bell, Target, Trash2, AlertTriangle, CheckCircle2, Info, LogOut, UserCircle2, Ticket, Copy, Check, XCircle, Mail, Send, TrendingUp, TrendingDown, ArrowUpRight, BellOff } from 'lucide-react';
 import { settingsService, AppSettings } from '../services/settings_service';
 import { useAuth } from '../context/AuthContext';
 import { apiService } from '../services/api';
 import { useNavigate } from 'react-router-dom';
+import { priceAlertsService, PRICE_ALERTS_UPDATED_EVENT } from '../services/price_alerts_service';
+import { watchlistMonitorService, WATCHLIST_MONITOR_UPDATED_EVENT } from '../services/watchlist_monitor_service';
+import { PriceAlert } from '../types';
 
 interface InviteInfo {
   code: string;
@@ -172,6 +175,115 @@ const InvitesPanel: React.FC = () => {
   );
 };
 
+// Price alerts could previously only be seen/managed one ticker at a time,
+// from the collapsed panel embedded on that stock's own Dashboard page - if
+// a user set alerts on five different stocks over a few weeks, there was no
+// way to see all of them in one place, or bulk-clean-up stale ones, without
+// revisiting each stock individually. This consolidates every alert (active
+// and recently triggered) across every ticker into one view.
+const AllPriceAlertsPanel: React.FC = () => {
+  const navigate = useNavigate();
+  const [alerts, setAlerts] = useState<PriceAlert[]>(() => priceAlertsService.getAlerts());
+  const [monitored, setMonitored] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    const reloadAlerts = () => setAlerts(priceAlertsService.getAlerts());
+    const reloadPrices = () => {
+      const map: Record<string, number> = {};
+      watchlistMonitorService.getAllMonitoredStates().forEach(s => {
+        if (s.quote?.price) map[s.ticker.toUpperCase().trim()] = s.quote.price;
+      });
+      setMonitored(map);
+    };
+    reloadAlerts();
+    reloadPrices();
+    window.addEventListener(PRICE_ALERTS_UPDATED_EVENT, reloadAlerts);
+    window.addEventListener(WATCHLIST_MONITOR_UPDATED_EVENT, reloadPrices);
+    return () => {
+      window.removeEventListener(PRICE_ALERTS_UPDATED_EVENT, reloadAlerts);
+      window.removeEventListener(WATCHLIST_MONITOR_UPDATED_EVENT, reloadPrices);
+    };
+  }, []);
+
+  const active = alerts.filter(a => !a.triggered);
+  const triggered = alerts.filter(a => a.triggered).slice(0, 10);
+
+  const distanceLabel = (alert: PriceAlert): string | null => {
+    const price = monitored[alert.ticker.toUpperCase().trim()];
+    if (!price) return null;
+    const pct = ((alert.target_price - price) / price) * 100;
+    return `${pct >= 0 ? '+' : ''}${pct.toFixed(1)}% away`;
+  };
+
+  const renderRow = (alert: PriceAlert, isTriggered: boolean) => (
+    <div key={alert.id} className="flex items-center justify-between gap-3 p-3 rounded-xl bg-background border border-borderDark/60">
+      <button
+        onClick={() => navigate(`/dashboard/${alert.ticker}`)}
+        className="flex items-center gap-2.5 min-w-0 text-left group"
+        title={`View ${alert.ticker}`}
+      >
+        {alert.direction === 'above' ? <TrendingUp className="w-4 h-4 text-bullish shrink-0" /> : <TrendingDown className="w-4 h-4 text-bearish shrink-0" />}
+        <div className="min-w-0">
+          <div className="text-xs font-mono font-bold text-white group-hover:text-brand transition-colors flex items-center gap-1">
+            {alert.ticker.replace('.NS', '').replace('.BO', '')}
+            <ArrowUpRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+          </div>
+          <div className="text-[11px] text-textMuted truncate">{alert.company_name}</div>
+        </div>
+      </button>
+      <div className="flex items-center gap-3 shrink-0">
+        <div className="text-right">
+          <div className="text-xs font-mono font-bold text-slate-200">
+            {isTriggered ? 'Crossed' : 'Alert'} {alert.direction} ₹{alert.target_price.toFixed(2)}
+          </div>
+          {!isTriggered && distanceLabel(alert) && (
+            <div className="text-[10px] text-textMuted font-mono">{distanceLabel(alert)}</div>
+          )}
+        </div>
+        <button
+          onClick={() => priceAlertsService.removeAlert(alert.id)}
+          className="p-1.5 rounded-lg text-textMuted hover:text-rose-400 hover:bg-rose-500/10 transition-all"
+          title={isTriggered ? 'Dismiss' : 'Remove alert'}
+        >
+          <XCircle className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="bg-surface border border-borderDark p-5 rounded-2xl shadow-lg flex flex-col gap-4">
+      <h3 className="font-bold text-sm text-white font-mono flex items-center gap-2">
+        <Bell className="w-4 h-4 text-brand" />
+        <span>Price Alerts</span>
+        {active.length > 0 && (
+          <span className="text-[10px] font-mono bg-brand/15 text-brand border border-brand/30 px-2 py-0.5 rounded-full">
+            {active.length} active
+          </span>
+        )}
+      </h3>
+      <p className="text-[11px] text-textMuted -mt-2">Every price alert you've set, across every stock, in one place. Set new ones from any stock's Dashboard page.</p>
+
+      {alerts.length === 0 ? (
+        <div className="flex flex-col items-center gap-2 py-6 text-textMuted">
+          <BellOff className="w-7 h-7 opacity-40" />
+          <p className="text-xs">No price alerts set yet.</p>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {active.map(a => renderRow(a, false))}
+          {triggered.length > 0 && (
+            <>
+              <span className="text-[10px] text-textMuted font-mono uppercase tracking-wider pt-1">Recently triggered</span>
+              {triggered.map(a => renderRow(a, true))}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export const SettingsPage: React.FC = () => {
   const [settings, setSettings] = useState<AppSettings>(() => settingsService.getSettings());
   const [confirmReset, setConfirmReset] = useState<boolean>(false);
@@ -279,6 +391,9 @@ export const SettingsPage: React.FC = () => {
           />
         </label>
       </div>
+
+      {/* Price Alerts (all tickers) */}
+      <AllPriceAlertsPanel />
 
       {/* Data Management */}
       <div className="bg-surface border border-borderDark p-5 rounded-2xl shadow-lg flex flex-col gap-4">
