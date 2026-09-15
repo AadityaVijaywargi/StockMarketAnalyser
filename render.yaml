@@ -10,3 +10,14 @@ services:
         value: 3.10.4
       - key: GOOGLE_API_KEY
         sync: false
+      # Set these in the Render dashboard (sync: false = never stored in git).
+      - key: JWT_SECRET_KEY
+        sync: false
+      - key: ADMIN_USERNAME
+        sync: false
+      - key: ADMIN_PASSWORD_HASH
+        sync: false
+      # Without DATABASE_URL, accounts/invites/synced user data live on
+      # Render's ephemeral disk and are wiped on every deploy.
+      - key: DATABASE_URL
+        sync: false
