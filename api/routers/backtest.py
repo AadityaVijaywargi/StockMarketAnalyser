@@ -10,7 +10,7 @@ from config.settings import settings
 from api.deps import get_downloader, get_cache
 from api.exceptions import InsufficientDataError, TickerNotFoundError
 from backtesting.strategy import TrendMomentumStrategy, MeanReversionStrategy
-from backtesting.engine import BacktestEngine
+from backtesting.engine import BacktestEngine, DEFAULT_COST_PCT, DEFAULT_SLIPPAGE_PCT
 from backtesting.metrics import BacktestMetrics
 import pandas as pd
 
@@ -31,6 +31,8 @@ class BacktestRequest(BaseModel):
     period: str = Field(default="5y", description="Historical lookback: 1y, 2y, 5y, or max")
     initial_capital: float = Field(default=100000.0, gt=0)
     strategy: str = Field(default="trend_momentum", description="trend_momentum or mean_reversion")
+    cost_pct: float = Field(default=DEFAULT_COST_PCT, ge=0, le=2, description="Transaction costs (brokerage, STT, charges) as % per side")
+    slippage_pct: float = Field(default=DEFAULT_SLIPPAGE_PCT, ge=0, le=2, description="Slippage as % per side")
 
 
 @router.post("/run")
@@ -40,8 +42,9 @@ async def run_backtest(
     cache: FileCacheManager = Depends(get_cache),
 ):
     """
-    Runs a long-only Trend + Momentum (SMA50/200, RSI14) strategy simulation
-    over historical daily data, with an ATR-based stop loss and target.
+    Runs a long-only strategy simulation over historical daily data, with an
+    ATR-based stop loss and target, next-day-open execution, and per-side
+    transaction costs and slippage (see backtesting/engine.py).
     """
     processed_ticker = TickerNormalizer.normalize(request.ticker)
     period = request.period if request.period in ("1y", "2y", "5y", "max") else "5y"
@@ -80,7 +83,13 @@ async def run_backtest(
 
     strategy_key = request.strategy if request.strategy in _STRATEGIES else "trend_momentum"
     strategy = _STRATEGIES[strategy_key]()
-    engine = BacktestEngine(data=features_df, strategy=strategy, initial_capital=request.initial_capital)
+    engine = BacktestEngine(
+        data=features_df,
+        strategy=strategy,
+        initial_capital=request.initial_capital,
+        cost_pct=request.cost_pct,
+        slippage_pct=request.slippage_pct,
+    )
     result = engine.run()
 
     # Buy & Hold benchmark - the question every backtest result needs to
@@ -88,8 +97,11 @@ async def run_backtest(
     # Computed over the exact same trimmed date range as the strategy run
     # (features_df, not the raw untrimmed stock_df) so the comparison is
     # apples-to-apples rather than the benchmark getting extra warmup days.
-    first_close = float(features_df["Close"].iloc[0])
-    bh_shares = request.initial_capital / first_close
+    # Pays the same entry slippage and costs as the strategy, filled at the
+    # first bar's open, so the strategy isn't flattered by a free benchmark.
+    cost_rate = request.cost_pct / 100.0
+    bh_fill = float(features_df["Open"].iloc[0]) * (1 + request.slippage_pct / 100.0)
+    bh_shares = request.initial_capital / (1 + cost_rate) / bh_fill
     bh_equity_values = (features_df["Close"].astype(float) * bh_shares).tolist()
     bh_equity_dates = [d.strftime("%Y-%m-%d") if hasattr(d, "strftime") else str(d) for d in features_df.index]
     bh_equity_series = pd.Series(bh_equity_values, index=pd.to_datetime(bh_equity_dates))
