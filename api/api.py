@@ -4,6 +4,8 @@ from fastapi.responses import JSONResponse
 from api.routers import health, analysis, market_opportunities, intelligence, backtest, auth, user_data
 from api.auth import decode_access_token
 from api.exceptions import PlatformException, platform_exception_handler, generic_exception_handler
+from api.startup_checks import check_config
+from config.settings import settings
 import jwt
 
 # Paths reachable without a login session
@@ -14,6 +16,9 @@ def create_app() -> FastAPI:
     Creates and configures the FastAPI application instance.
     Registers middleware, exception handlers, and API endpoints.
     """
+    # Refuse to start with a config that would make sessions forgeable.
+    check_config(settings)
+
     app = FastAPI(
         title="AI Equity Research Platform",
         description="Quantitative technical analysis, macro-economic context, and explanation engine API.",
