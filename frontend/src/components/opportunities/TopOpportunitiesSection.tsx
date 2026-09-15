@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Disclaimer } from '../Disclaimer';
 import { TopOpportunityCard } from '../../types';
 import { apiService } from '../../services/api';
 import { OpportunityCard } from './OpportunityCard';
@@ -95,6 +96,7 @@ export const TopOpportunitiesSection: React.FC<TopOpportunitiesSectionProps> = (
           <p className="text-sm text-textMuted max-w-xl">
             Live deterministic signals scanned across liquid NSE market assets. Sorted by overall quantitative model score.
           </p>
+          <Disclaimer className="max-w-xl" />
         </div>
 
         {/* Refresh Button */}

@@ -4,6 +4,7 @@ import { createChart, ColorType, IChartApi } from 'lightweight-charts';
 import { DeterministicAnalysisReport, TopOpportunityCard } from '../types';
 import { apiService } from '../services/api';
 import { pickBuyAvoid, findSectorAlternatives } from '../utils/compare_suggestions';
+import { Disclaimer } from '../components/Disclaimer';
 import { SearchBar } from '../components/search/SearchBar';
 import { GitCompare, X, Loader2, TrendingUp, TrendingDown, AlertCircle, Download, ThumbsUp, ThumbsDown, Lightbulb, ArrowRight } from 'lucide-react';
 
@@ -405,6 +406,10 @@ export const ComparePage: React.FC = () => {
                 ))}
               </div>
             )}
+
+            <Disclaimer>
+              Ranks only the stocks you picked, by model score. It's a research aid, not investment advice or a recommendation to buy or sell.
+            </Disclaimer>
           </div>
         )}
         </>

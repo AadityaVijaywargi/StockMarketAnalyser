@@ -526,6 +526,7 @@ export interface BacktestMetrics {
   win_rate_pct: number;
   avg_win_pct: number;
   avg_loss_pct: number;
+  total_costs?: number;
 }
 
 export interface BacktestBenchmark {
@@ -540,6 +541,11 @@ export interface BacktestResult {
   bars_simulated: number;
   strategy_name: string;
   initial_capital: number;
+  assumptions: {
+    execution: string;
+    cost_pct_per_side: number;
+    slippage_pct_per_side: number;
+  };
   equity_curve: { date: string; value: number }[];
   trades: BacktestTrade[];
   open_position: { entry_date: string; entry_price: number; unrealized_pnl_pct: number } | null;
