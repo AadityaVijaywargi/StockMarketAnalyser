@@ -6,6 +6,7 @@ import { NotificationProvider } from './context/NotificationContext'
 import { AuthProvider } from './context/AuthContext'
 import './index.css'
 import App from './App.tsx'
+import { BackendWakeBanner } from './components/BackendWakeBanner'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -14,6 +15,7 @@ createRoot(document.getElementById('root')!).render(
         <WatchlistProvider>
           <NotificationProvider>
             <App />
+            <BackendWakeBanner />
           </NotificationProvider>
         </WatchlistProvider>
       </AuthProvider>
