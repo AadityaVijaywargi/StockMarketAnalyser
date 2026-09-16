@@ -4,7 +4,8 @@ from fastapi.responses import JSONResponse
 from api.routers import health, analysis, market_opportunities, intelligence, backtest, auth, user_data
 from api.auth import decode_access_token
 from api.exceptions import PlatformException, platform_exception_handler, generic_exception_handler
-from api.startup_checks import check_config
+from api.security import register_security
+from api.startup_checks import check_config, is_production
 from config.settings import settings
 import jwt
 
@@ -25,14 +26,24 @@ def create_app() -> FastAPI:
         version="1.0.0"
     )
 
-    # Enable Cross-Origin Resource Sharing (CORS)
+    production = is_production(settings)
+
+    # Cross-Origin Resource Sharing, restricted to origins we actually serve.
+    # allow_origins=["*"] together with allow_credentials=True would let any
+    # website on the internet issue authenticated requests using a logged-in
+    # visitor's session, so the list is explicit and configured per deploy.
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=settings.allowed_origin_list,
         allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        allow_headers=["Authorization", "Content-Type"],
     )
+
+    # Registered after CORS so it runs first on the way in (Starlette applies
+    # middleware in reverse registration order) and the HTTPS redirect happens
+    # before anything else touches the request.
+    register_security(app, production=production)
 
     def _unauthenticated(request: Request, detail: str) -> JSONResponse:
         # This middleware sits outside CORSMiddleware, so a response returned

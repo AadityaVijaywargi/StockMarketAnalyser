@@ -66,6 +66,35 @@ class Settings(BaseSettings):
     API_HOST: str = Field(default="127.0.0.1")
     API_PORT: int = Field(default=8000)
 
+    # Public site / CORS
+    # Comma-separated list of browser origins allowed to call this API.
+    # Wildcard CORS plus allow_credentials lets any site on the internet make
+    # authenticated requests with a victim's session, so production must name
+    # its origins explicitly. Left empty in development, which falls back to
+    # the local Vite dev server origins.
+    ALLOWED_ORIGINS: str = Field(
+        default="",
+        description="Comma-separated allowed browser origins, e.g. https://example.com,https://www.example.com",
+    )
+    # Canonical public base URL, used to build sitemap.xml and canonical tags.
+    SITE_URL: str = Field(
+        default="https://stock-market-analyser-vert.vercel.app",
+        description="Canonical public base URL of the frontend (no trailing slash)",
+    )
+
+    @property
+    def allowed_origin_list(self) -> List[str]:
+        """
+        Parsed ALLOWED_ORIGINS, falling back to local dev origins when unset.
+
+        Note the fallback is dev-only: startup_checks refuses to boot a
+        production deployment that has not configured this explicitly.
+        """
+        origins = [o.strip().rstrip("/") for o in self.ALLOWED_ORIGINS.split(",") if o.strip()]
+        if origins:
+            return origins
+        return ["http://localhost:5173", "http://127.0.0.1:5173"]
+
     # Authentication Settings
     JWT_SECRET_KEY: str = Field(default="", description="Secret key used to sign login session tokens")
     JWT_ALGORITHM: str = Field(default="HS256")
