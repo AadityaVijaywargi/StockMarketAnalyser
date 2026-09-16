@@ -209,7 +209,7 @@ export const ComparePage: React.FC = () => {
     <div className="min-h-screen bg-background text-text font-sans p-6 md:p-8 flex flex-col gap-6 max-w-6xl mx-auto">
       <div className="border-b border-borderDark/80 pb-5">
         <h1 className="font-extrabold text-2xl text-white tracking-tight flex items-center gap-2.5 font-mono">
-          <GitCompare className="w-6 h-6 text-brand" />
+          <GitCompare className="w-6 h-6 text-brandText" />
           <span>Compare Stocks</span>
         </h1>
         <p className="text-xs text-textMuted mt-1">Pick up to {MAX_COMPARE} stocks to see their scores and metrics side by side.</p>
@@ -230,7 +230,7 @@ export const ComparePage: React.FC = () => {
             <div className="bg-surface border border-borderDark rounded-2xl p-5 shadow-lg">
               <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
                 <h3 className="font-bold text-sm text-white font-mono flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-brand" />
+                  <TrendingUp className="w-4 h-4 text-brandText" />
                   <span>Normalized Performance</span>
                 </h3>
                 <div className="flex items-center bg-background border border-borderDark/80 p-1 rounded-xl gap-1 font-mono text-xs">
@@ -268,7 +268,7 @@ export const ComparePage: React.FC = () => {
           <div className="flex items-center justify-end p-3 border-b border-borderDark/60">
             <button
               onClick={handleExportCSV}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-brand/15 border border-brand/40 text-brand rounded-lg text-[11px] font-mono font-bold hover:bg-brand/25 transition-all"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-brand/15 border border-brand/40 text-brandText rounded-lg text-[11px] font-mono font-bold hover:bg-brand/25 transition-all"
             >
               <Download className="w-3.5 h-3.5" />
               <span>Export CSV</span>
@@ -334,7 +334,7 @@ export const ComparePage: React.FC = () => {
         {buyPick && avoidPick && (
           <div className="bg-surface border border-brand/30 rounded-2xl p-5 shadow-premium flex flex-col gap-4">
             <h3 className="font-bold text-sm text-white font-mono flex items-center gap-2">
-              <Lightbulb className="w-4 h-4 text-brand" />
+              <Lightbulb className="w-4 h-4 text-brandText" />
               <span>Suggestion</span>
             </h3>
 
@@ -346,7 +346,7 @@ export const ComparePage: React.FC = () => {
                 </div>
                 <button
                   onClick={() => navigate(`/dashboard/${buyPick.ticker}`)}
-                  className="text-sm font-bold text-white hover:text-brand transition-colors"
+                  className="text-sm font-bold text-white hover:text-brandText transition-colors"
                 >
                   {buyPick.report!.company_name} ({buyPick.ticker.replace('.NS', '').replace('.BO', '')})
                 </button>
@@ -369,7 +369,7 @@ export const ComparePage: React.FC = () => {
                 </div>
                 <button
                   onClick={() => navigate(`/dashboard/${avoidPick.ticker}`)}
-                  className="text-sm font-bold text-white hover:text-brand transition-colors"
+                  className="text-sm font-bold text-white hover:text-brandText transition-colors"
                 >
                   {avoidPick.report!.company_name} ({avoidPick.ticker.replace('.NS', '').replace('.BO', '')})
                 </button>
@@ -397,7 +397,7 @@ export const ComparePage: React.FC = () => {
                     </div>
                     <button
                       onClick={() => navigate(`/dashboard/${alt.ticker}`)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand/15 border border-brand/40 text-brand text-[11px] font-mono font-bold hover:bg-brand/25 transition-all"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand/15 border border-brand/40 text-brandText text-[11px] font-mono font-bold hover:bg-brand/25 transition-all"
                     >
                       <span>Try {alt.ticker.replace('.NS', '').replace('.BO', '')} ({alt.overall_score.toFixed(1)}/100)</span>
                       <ArrowRight className="w-3 h-3" />

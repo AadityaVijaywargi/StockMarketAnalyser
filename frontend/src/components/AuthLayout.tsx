@@ -55,7 +55,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({ children }) => {
                   className="flex items-start gap-3.5"
                 >
                   <div className="w-9 h-9 rounded-lg bg-white/[0.03] border border-borderDark flex items-center justify-center shrink-0 mt-0.5">
-                    <Icon className="w-4 h-4 text-brand" />
+                    <Icon className="w-4 h-4 text-brandText" />
                   </div>
                   <div>
                     <h3 className="text-sm font-bold text-white">{f.title}</h3>

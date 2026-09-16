@@ -45,7 +45,7 @@ export const SearchDropdown: React.FC<SearchDropdownProps> = ({
         <div className="flex flex-col gap-1 max-h-[320px] overflow-y-auto pr-1">
           <div className="text-[10px] font-bold font-mono tracking-wider text-textMuted uppercase px-3 py-1 flex items-center justify-between border-b border-borderDark/40 mb-1">
             <div className="flex items-center gap-1.5">
-              <Search className="w-3 h-3 text-brand" />
+              <Search className="w-3 h-3 text-brandText" />
               <span>{isFuzzyState ? 'Fuzzy Suggestions' : 'Search Results'}</span>
             </div>
             <span className="text-[9px] text-textMuted">{results.length} Found</span>
@@ -94,7 +94,7 @@ export const SearchDropdown: React.FC<SearchDropdownProps> = ({
         <div className="flex flex-col gap-2 p-2 border-t border-borderDark/30 pt-3">
           <div className="text-[10px] font-bold font-mono tracking-wider text-textMuted uppercase flex items-center justify-between gap-1.5">
             <div className="flex items-center gap-1.5">
-              <History className="w-3.5 h-3.5 text-brand" />
+              <History className="w-3.5 h-3.5 text-brandText" />
               <span>Recent Searches</span>
             </div>
             {onClearRecent && (

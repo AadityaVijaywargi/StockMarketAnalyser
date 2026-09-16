@@ -147,7 +147,7 @@ export const ChartPage: React.FC = () => {
         )}
 
         {report?.scores?.recommendation && (
-          <span className="text-[11px] font-mono font-bold px-2.5 py-1 rounded-lg bg-brand/15 border border-brand/30 text-brand">
+          <span className="text-[11px] font-mono font-bold px-2.5 py-1 rounded-lg bg-brand/15 border border-brand/30 text-brandText">
             {report.scores.recommendation}
           </span>
         )}
@@ -166,7 +166,7 @@ export const ChartPage: React.FC = () => {
           aria-label={isWatchlistPanelOpen ? 'Hide watchlist' : 'Show watchlist'}
           className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-mono font-semibold transition-all ${
             isWatchlistPanelOpen
-              ? 'bg-brand/15 border-brand/40 text-brand'
+              ? 'bg-brand/15 border-brand/40 text-brandText'
               : 'bg-background border-borderDark/60 text-textMuted hover:text-white'
           }`}
           title="Toggle watchlist panel"
@@ -181,7 +181,7 @@ export const ChartPage: React.FC = () => {
         <div className="flex-1 min-w-0 overflow-y-auto p-3 sm:p-4">
           {isLoading && (
             <div className="h-full flex flex-col items-center justify-center gap-3 text-textMuted">
-              <Loader2 className="w-7 h-7 animate-spin text-brand" />
+              <Loader2 className="w-7 h-7 animate-spin text-brandText" />
               <span className="font-mono text-xs font-bold">Loading {ticker} chart workspace...</span>
             </div>
           )}
@@ -248,7 +248,7 @@ export const ChartPage: React.FC = () => {
                         isActive ? 'bg-brand/10 border-l-2 border-l-brand' : 'hover:bg-white/[0.03]'
                       }`}
                     >
-                      <div className={`text-xs font-mono font-bold ${isActive ? 'text-brand' : 'text-white'}`}>
+                      <div className={`text-xs font-mono font-bold ${isActive ? 'text-brandText' : 'text-white'}`}>
                         {item.company_name || clean.split('.')[0]}
                       </div>
                       <div className="text-[10px] text-textMuted font-mono">{clean}</div>

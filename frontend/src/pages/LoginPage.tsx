@@ -15,7 +15,7 @@ export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const from = (location.state as { from?: string })?.from || '/';
+  const from = (location.state as { from?: string })?.from || '/app';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,7 +42,7 @@ export const LoginPage: React.FC = () => {
       >
         <div className="flex flex-col items-center gap-2 text-center lg:hidden">
           <div className="w-11 h-11 rounded-xl bg-brand/10 border border-brand/30 flex items-center justify-center">
-            <TrendingUp className="w-5 h-5 text-brand" />
+            <TrendingUp className="w-5 h-5 text-brandText" />
           </div>
           <h1 className="font-extrabold text-lg text-white font-mono tracking-tight">STONKS</h1>
         </div>
@@ -102,7 +102,7 @@ export const LoginPage: React.FC = () => {
           <button
             type="submit"
             disabled={isLoading || !username || !password}
-            className="flex items-center justify-center gap-2 mt-1 px-4 py-2.5 rounded-xl bg-brand text-black font-bold text-sm font-mono transition-all hover:brightness-110 disabled:opacity-40 disabled:pointer-events-none"
+            className="flex items-center justify-center gap-2 mt-1 px-4 py-2.5 rounded-xl bg-brand text-white font-bold text-sm font-mono transition-all hover:brightness-110 disabled:opacity-40 disabled:pointer-events-none"
           >
             {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />}
             <span>{isLoading ? 'Signing in...' : 'Sign In'}</span>
@@ -111,7 +111,7 @@ export const LoginPage: React.FC = () => {
 
         <p className="text-center text-xs text-textMuted">
           Invited by email?{' '}
-          <Link to="/signup" className="text-brand hover:underline font-semibold">Sign up</Link>
+          <Link to="/signup" className="text-brandText hover:underline font-semibold">Sign up</Link>
         </p>
       </motion.div>
     </AuthLayout>

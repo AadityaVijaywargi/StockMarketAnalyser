@@ -95,10 +95,10 @@ export const AIResearchPanel: React.FC<AIResearchPanelProps> = ({ report }) => {
         {evidence && evidence.length > 0 && (
           <div className="flex flex-wrap items-center gap-1.5 mt-1">
             <span className="text-[9px] text-textMuted font-mono mr-1 flex items-center gap-1">
-              <Info className="w-2.5 h-2.5 text-brand" /> Trace Evidence:
+              <Info className="w-2.5 h-2.5 text-brandText" /> Trace Evidence:
             </span>
             {evidence.map((tag, idx) => (
-              <span key={idx} className="text-[9px] text-brand bg-brand/10 border border-brand/20 px-2 py-0.5 rounded font-mono">
+              <span key={idx} className="text-[9px] text-brandText bg-brand/10 border border-brand/20 px-2 py-0.5 rounded font-mono">
                 {tag}
               </span>
             ))}
@@ -166,7 +166,7 @@ export const AIResearchPanel: React.FC<AIResearchPanelProps> = ({ report }) => {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-borderDark/60 pb-5 gap-4">
           <div className="flex items-center gap-3.5">
             <div className="w-10 h-10 rounded-xl bg-brand/10 border border-brand/20 flex items-center justify-center shadow-lg shadow-brand/10">
-              <BrainCircuit className="w-5 h-5 text-brand" />
+              <BrainCircuit className="w-5 h-5 text-brandText" />
             </div>
             <div>
               <h3 className="font-bold text-lg text-white">AI Equity Intelligence & Investment Thesis</h3>
@@ -196,7 +196,7 @@ export const AIResearchPanel: React.FC<AIResearchPanelProps> = ({ report }) => {
         <div className="bg-background border border-borderDark/40 p-5 rounded-xl flex flex-col gap-3">
           <div className="flex items-center justify-between border-b border-borderDark/40 pb-2">
             <h4 className="text-xs font-bold font-mono text-white tracking-wider uppercase flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4 text-brand" />
+              <Sparkles className="w-4 h-4 text-brandText" />
               <span>Institutional Executive Summary</span>
             </h4>
             <span className="text-[10px] font-mono text-textMuted">TECHNICAL SCORE: {formatScore(score)}/100</span>
@@ -221,7 +221,7 @@ export const AIResearchPanel: React.FC<AIResearchPanelProps> = ({ report }) => {
                   <strong className="text-white block font-sans mb-0.5">{factor.title}</strong>
                   <span>{factor.explanation}</span>
                   {factor.evidence && factor.evidence.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-1 font-mono text-[9px] text-brand">
+                    <div className="flex flex-wrap gap-1 mt-1 font-mono text-[9px] text-brandText">
                       {factor.evidence.map((e, eIdx) => (
                         <span key={eIdx} className="bg-brand/10 border border-brand/20 px-1.5 py-0.2 rounded">
                           {e}
@@ -246,7 +246,7 @@ export const AIResearchPanel: React.FC<AIResearchPanelProps> = ({ report }) => {
                   <strong className="text-white block font-sans mb-0.5">{factor.title}</strong>
                   <span>{factor.explanation}</span>
                   {factor.evidence && factor.evidence.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-1 font-mono text-[9px] text-brand">
+                    <div className="flex flex-wrap gap-1 mt-1 font-mono text-[9px] text-brandText">
                       {factor.evidence.map((e, eIdx) => (
                         <span key={eIdx} className="bg-brand/10 border border-brand/20 px-1.5 py-0.2 rounded">
                           {e}
@@ -271,7 +271,7 @@ export const AIResearchPanel: React.FC<AIResearchPanelProps> = ({ report }) => {
                   <strong className="text-white block font-sans mb-0.5">{factor.title}</strong>
                   <span>{factor.explanation}</span>
                   {factor.evidence && factor.evidence.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-1 font-mono text-[9px] text-brand">
+                    <div className="flex flex-wrap gap-1 mt-1 font-mono text-[9px] text-brandText">
                       {factor.evidence.map((e, eIdx) => (
                         <span key={eIdx} className="bg-brand/10 border border-brand/20 px-1.5 py-0.2 rounded">
                           {e}
@@ -289,7 +289,7 @@ export const AIResearchPanel: React.FC<AIResearchPanelProps> = ({ report }) => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-1">
           <div className="bg-background border border-borderDark/40 p-5 rounded-xl flex flex-col gap-3">
             <h4 className="text-xs font-bold font-mono text-white tracking-wider uppercase flex items-center gap-1.5 border-b border-borderDark/40 pb-2">
-              <BarChart3 className="w-4 h-4 text-brand" />
+              <BarChart3 className="w-4 h-4 text-brandText" />
               <span>Technical Outlook</span>
             </h4>
             {renderSectionText(
@@ -300,7 +300,7 @@ export const AIResearchPanel: React.FC<AIResearchPanelProps> = ({ report }) => {
 
           <div className="bg-background border border-borderDark/40 p-5 rounded-xl flex flex-col gap-3">
             <h4 className="text-xs font-bold font-mono text-white tracking-wider uppercase flex items-center gap-1.5 border-b border-borderDark/40 pb-2">
-              <Clock className="w-4 h-4 text-brand" />
+              <Clock className="w-4 h-4 text-brandText" />
               <span>Short-Term (1-5 Days)</span>
             </h4>
             {renderSectionText(
@@ -311,7 +311,7 @@ export const AIResearchPanel: React.FC<AIResearchPanelProps> = ({ report }) => {
 
           <div className="bg-background border border-borderDark/40 p-5 rounded-xl flex flex-col gap-3">
             <h4 className="text-xs font-bold font-mono text-white tracking-wider uppercase flex items-center gap-1.5 border-b border-borderDark/40 pb-2">
-              <ShieldCheck className="w-4 h-4 text-brand" />
+              <ShieldCheck className="w-4 h-4 text-brandText" />
               <span>Medium-Term (1-3 Months)</span>
             </h4>
             {renderSectionText(
@@ -326,7 +326,7 @@ export const AIResearchPanel: React.FC<AIResearchPanelProps> = ({ report }) => {
           {/* Action Plan */}
           <div className="bg-background border border-borderDark/40 p-5 rounded-xl flex flex-col gap-3">
             <h4 className="text-xs font-bold font-mono text-white tracking-wider uppercase flex items-center gap-1.5 border-b border-borderDark/40 pb-2">
-              <Zap className="w-4 h-4 text-brand" />
+              <Zap className="w-4 h-4 text-brandText" />
               <span>Execution Action Plan</span>
             </h4>
             {renderSectionText(
@@ -338,7 +338,7 @@ export const AIResearchPanel: React.FC<AIResearchPanelProps> = ({ report }) => {
           {/* Playbook Targets */}
           <div className="bg-background border border-borderDark/40 p-5 rounded-xl flex flex-col gap-3">
             <h4 className="text-xs font-bold font-mono text-white tracking-wider uppercase flex items-center gap-1.5 border-b border-borderDark/40 pb-2">
-              <Zap className="w-4 h-4 text-brand" />
+              <Zap className="w-4 h-4 text-brandText" />
               <span>Suggested Trading Playbook</span>
             </h4>
             <div className="grid grid-cols-2 gap-4 font-mono text-xs text-textMuted">
@@ -365,7 +365,7 @@ export const AIResearchPanel: React.FC<AIResearchPanelProps> = ({ report }) => {
         {/* 5. Traceable Technical Evidence Ledger Table */}
         <div className="bg-background border border-borderDark/40 p-5 rounded-xl flex flex-col gap-4 mt-1">
           <h4 className="text-xs font-bold font-mono text-white tracking-wider uppercase flex items-center gap-1.5">
-            <BarChart3 className="w-4 h-4 text-brand" />
+            <BarChart3 className="w-4 h-4 text-brandText" />
             <span>Traceable Technical Evidence Ledger</span>
           </h4>
           <div className="overflow-x-auto">
@@ -423,7 +423,7 @@ export const AIResearchPanel: React.FC<AIResearchPanelProps> = ({ report }) => {
             className="w-full p-4 flex items-center justify-between bg-surface/50 hover:bg-surface transition-all text-xs font-mono text-white font-bold"
           >
             <div className="flex items-center gap-2">
-              <Terminal className="w-4 h-4 text-brand" />
+              <Terminal className="w-4 h-4 text-brandText" />
               <span>QUANTITATIVE ENGINE DIAGNOSTICS & SCORE AUDIT</span>
             </div>
             <div className="flex items-center gap-1.5 text-textMuted">
@@ -493,7 +493,7 @@ export const AIResearchPanel: React.FC<AIResearchPanelProps> = ({ report }) => {
         {/* 7. Disclaimer & Metadata */}
         <div className="bg-brand/5 border border-brand/20 p-5 rounded-xl flex flex-col gap-3 mt-1">
           <div className="flex items-center gap-2 text-xs font-bold font-mono text-white tracking-wider uppercase border-b border-brand/20 pb-2">
-            <FileText className="w-4 h-4 text-brand" />
+            <FileText className="w-4 h-4 text-brandText" />
             <span>Research Disclaimer & Audit Metadata</span>
           </div>
           <p className="text-xs text-textMuted leading-relaxed">

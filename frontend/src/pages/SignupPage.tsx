@@ -38,7 +38,7 @@ export const SignupPage: React.FC = () => {
     setIsLoading(true);
     try {
       await signup(inviteCode.trim(), email.trim(), username.trim(), password);
-      navigate('/', { replace: true });
+      navigate('/app', { replace: true });
     } catch (err: any) {
       // FastAPI validation errors (422) send `detail` as an array of
       // {msg, loc, ...} objects rather than a string - rendering that
@@ -66,7 +66,7 @@ export const SignupPage: React.FC = () => {
       >
         <div className="flex flex-col items-center gap-2 text-center lg:hidden">
           <div className="w-11 h-11 rounded-xl bg-brand/10 border border-brand/30 flex items-center justify-center">
-            <TrendingUp className="w-5 h-5 text-brand" />
+            <TrendingUp className="w-5 h-5 text-brandText" />
           </div>
           <h1 className="font-extrabold text-lg text-white font-mono tracking-tight">STONKS</h1>
         </div>
@@ -176,7 +176,7 @@ export const SignupPage: React.FC = () => {
           <button
             type="submit"
             disabled={isLoading || !inviteCode || !email || !username || !password || !confirmPassword}
-            className="flex items-center justify-center gap-2 mt-1 px-4 py-2.5 rounded-xl bg-brand text-black font-bold text-sm font-mono transition-all hover:brightness-110 disabled:opacity-40 disabled:pointer-events-none"
+            className="flex items-center justify-center gap-2 mt-1 px-4 py-2.5 rounded-xl bg-brand text-white font-bold text-sm font-mono transition-all hover:brightness-110 disabled:opacity-40 disabled:pointer-events-none"
           >
             {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
             <span>{isLoading ? 'Creating account...' : 'Create Account'}</span>
@@ -185,7 +185,7 @@ export const SignupPage: React.FC = () => {
 
         <p className="text-center text-xs text-textMuted">
           Already have an account?{' '}
-          <Link to="/login" className="text-brand hover:underline font-semibold">Sign in</Link>
+          <Link to="/login" className="text-brandText hover:underline font-semibold">Sign in</Link>
         </p>
       </motion.div>
     </AuthLayout>

@@ -28,7 +28,7 @@ export const SupportResistancePanel: React.FC<SupportResistancePanelProps> = ({
     <div className="bg-surface border border-borderDark p-6 rounded-xl flex flex-col gap-5 h-full">
       <div className="flex items-center gap-3 border-b border-borderDark pb-4">
         <div className="w-8 h-8 rounded bg-brand/10 border border-brand/20 flex items-center justify-center">
-          <Shield className="w-4 h-4 text-brand" />
+          <Shield className="w-4 h-4 text-brandText" />
         </div>
         <h3 className="font-bold text-base text-white">Support & Resistance Zones</h3>
       </div>

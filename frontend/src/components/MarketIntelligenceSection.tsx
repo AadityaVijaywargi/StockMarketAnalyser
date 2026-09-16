@@ -106,7 +106,7 @@ export const MarketIntelligenceSection: React.FC<MarketIntelligenceSectionProps>
   if (isFetching && !intelligencePack) {
     return (
       <div className="bg-surface border border-borderDark/40 p-8 rounded-2xl flex flex-col items-center justify-center text-center gap-3">
-        <Newspaper className="w-8 h-8 text-brand animate-pulse" />
+        <Newspaper className="w-8 h-8 text-brandText animate-pulse" />
         <h3 className="text-sm font-mono text-white font-bold">Compiling Verified Market News & Intelligence...</h3>
         <p className="text-xs text-textMuted max-w-md">Gathering institutional feeds, corporate actions, and sentiment data for {ticker}.</p>
       </div>
@@ -179,7 +179,7 @@ export const MarketIntelligenceSection: React.FC<MarketIntelligenceSectionProps>
     const rounded = Math.round(score);
     if (rounded >= 80) {
       return (
-        <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-brand/15 text-brand border border-brand/30">
+        <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-brand/15 text-brandText border border-brand/30">
           High {rounded}%
         </span>
       );
@@ -205,7 +205,7 @@ export const MarketIntelligenceSection: React.FC<MarketIntelligenceSectionProps>
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 border-b border-borderDark/60 pb-5">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-brand/10 border border-brand/20 flex items-center justify-center">
-            <Newspaper className="w-5 h-5 text-brand" />
+            <Newspaper className="w-5 h-5 text-brandText" />
           </div>
           <div>
             <h3 className="font-bold text-lg text-white">Market Intelligence & Verified News Stream</h3>
@@ -242,31 +242,31 @@ export const MarketIntelligenceSection: React.FC<MarketIntelligenceSectionProps>
         <div className="flex items-center gap-2 overflow-x-auto pb-1 font-mono text-xs">
           <button
             onClick={() => setActiveCategory('all')}
-            className={`px-3.5 py-1.5 rounded-lg border transition-all ${activeCategory === 'all' ? 'bg-brand/15 border-brand text-brand font-bold' : 'bg-background border-borderDark/40 text-textMuted hover:text-white'}`}
+            className={`px-3.5 py-1.5 rounded-lg border transition-all ${activeCategory === 'all' ? 'bg-brand/15 border-brand text-brandText font-bold' : 'bg-background border-borderDark/40 text-textMuted hover:text-white'}`}
           >
             All News ({allArticles.length})
           </button>
           <button
             onClick={() => setActiveCategory('company')}
-            className={`px-3.5 py-1.5 rounded-lg border transition-all ${activeCategory === 'company' ? 'bg-brand/15 border-brand text-brand font-bold' : 'bg-background border-borderDark/40 text-textMuted hover:text-white'}`}
+            className={`px-3.5 py-1.5 rounded-lg border transition-all ${activeCategory === 'company' ? 'bg-brand/15 border-brand text-brandText font-bold' : 'bg-background border-borderDark/40 text-textMuted hover:text-white'}`}
           >
             Company ({company_news.length})
           </button>
           <button
             onClick={() => setActiveCategory('sector')}
-            className={`px-3.5 py-1.5 rounded-lg border transition-all ${activeCategory === 'sector' ? 'bg-brand/15 border-brand text-brand font-bold' : 'bg-background border-borderDark/40 text-textMuted hover:text-white'}`}
+            className={`px-3.5 py-1.5 rounded-lg border transition-all ${activeCategory === 'sector' ? 'bg-brand/15 border-brand text-brandText font-bold' : 'bg-background border-borderDark/40 text-textMuted hover:text-white'}`}
           >
             Sector ({sector_news.length})
           </button>
           <button
             onClick={() => setActiveCategory('macro')}
-            className={`px-3.5 py-1.5 rounded-lg border transition-all ${activeCategory === 'macro' ? 'bg-brand/15 border-brand text-brand font-bold' : 'bg-background border-borderDark/40 text-textMuted hover:text-white'}`}
+            className={`px-3.5 py-1.5 rounded-lg border transition-all ${activeCategory === 'macro' ? 'bg-brand/15 border-brand text-brandText font-bold' : 'bg-background border-borderDark/40 text-textMuted hover:text-white'}`}
           >
             Macro ({macro_news.length})
           </button>
           <button
             onClick={() => setActiveCategory('events')}
-            className={`px-3.5 py-1.5 rounded-lg border transition-all ${activeCategory === 'events' ? 'bg-brand/15 border-brand text-brand font-bold' : 'bg-background border-borderDark/40 text-textMuted hover:text-white'}`}
+            className={`px-3.5 py-1.5 rounded-lg border transition-all ${activeCategory === 'events' ? 'bg-brand/15 border-brand text-brandText font-bold' : 'bg-background border-borderDark/40 text-textMuted hover:text-white'}`}
           >
             Events ({key_events.length})
           </button>
@@ -289,14 +289,14 @@ export const MarketIntelligenceSection: React.FC<MarketIntelligenceSectionProps>
       {(activeCategory === 'all' || activeCategory === 'events') && key_events.length > 0 && !searchQuery && (
         <div className="bg-background border border-borderDark/40 p-4 rounded-xl flex flex-col gap-3">
           <h4 className="text-xs font-bold font-mono text-white uppercase tracking-wider flex items-center gap-1.5 border-b border-borderDark/40 pb-2">
-            <Calendar className="w-4 h-4 text-brand" />
+            <Calendar className="w-4 h-4 text-brandText" />
             <span>Key Corporate Actions & Earnings Calendar</span>
           </h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {key_events.map((evt: KeyEvent) => (
               <div key={evt.id} className="bg-surface/80 border border-borderDark/40 p-3.5 rounded-lg flex flex-col gap-2">
                 <div className="flex items-center justify-between font-mono text-[10px]">
-                  <span className="text-brand font-bold uppercase tracking-wide">
+                  <span className="text-brandText font-bold uppercase tracking-wide">
                     {evt.event_type}
                   </span>
                   <div className="flex items-center gap-2">
@@ -361,7 +361,7 @@ export const MarketIntelligenceSection: React.FC<MarketIntelligenceSectionProps>
                       <span className="text-textMuted">{relativeTime}</span>
 
                       {/* Topic Category */}
-                      <span className="bg-surface px-2 py-0.5 rounded text-[9px] font-bold text-brand border border-brand/20 uppercase">
+                      <span className="bg-surface px-2 py-0.5 rounded text-[9px] font-bold text-brandText border border-brand/20 uppercase">
                         {article.topic || 'General'}
                       </span>
                     </div>
@@ -376,7 +376,7 @@ export const MarketIntelligenceSection: React.FC<MarketIntelligenceSectionProps>
                   {/* Headline */}
                   <h4 
                     onClick={() => toggleArticle(article.id)}
-                    className="text-base md:text-lg font-bold text-slate-100 hover:text-brand transition-colors cursor-pointer leading-snug font-sans"
+                    className="text-base md:text-lg font-bold text-slate-100 hover:text-brandText transition-colors cursor-pointer leading-snug font-sans"
                   >
                     {cleanHeadline}
                   </h4>
@@ -392,13 +392,13 @@ export const MarketIntelligenceSection: React.FC<MarketIntelligenceSectionProps>
                   {isExpanded && (
                     <div className="mt-1 p-4 rounded-xl bg-surface/60 border border-borderDark/60 flex flex-col gap-3 font-sans text-xs animate-fadeIn">
                       <div className="font-bold text-slate-200 uppercase tracking-wider text-[11px] font-mono flex items-center gap-1.5">
-                        <Sparkles className="w-3.5 h-3.5 text-brand" />
+                        <Sparkles className="w-3.5 h-3.5 text-brandText" />
                         Key Insights & Takeaways
                       </div>
                       <ul className="flex flex-col gap-1.5 text-slate-300">
                         {points.map((pt, pIdx) => (
                           <li key={pIdx} className="flex items-start gap-2">
-                            <span className="text-brand font-bold text-sm leading-none mt-0.5">•</span>
+                            <span className="text-brandText font-bold text-sm leading-none mt-0.5">•</span>
                             <span>{cleanHtmlText(pt)}</span>
                           </li>
                         ))}
@@ -409,7 +409,7 @@ export const MarketIntelligenceSection: React.FC<MarketIntelligenceSectionProps>
                         <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-borderDark/40 font-mono text-[10px]">
                           <span className="text-textMuted font-medium">Related Tickers:</span>
                           {article.entities.map((ent, idx) => (
-                            <span key={idx} className="bg-background border border-borderDark px-2 py-0.5 rounded text-brand font-bold">
+                            <span key={idx} className="bg-background border border-borderDark px-2 py-0.5 rounded text-brandText font-bold">
                               ${ent}
                             </span>
                           ))}
@@ -426,9 +426,9 @@ export const MarketIntelligenceSection: React.FC<MarketIntelligenceSectionProps>
                       className="text-xs font-mono text-textMuted hover:text-white transition-colors flex items-center gap-1"
                     >
                       {isExpanded ? (
-                        <>Show Less <ChevronUp className="w-3.5 h-3.5 text-brand" /></>
+                        <>Show Less <ChevronUp className="w-3.5 h-3.5 text-brandText" /></>
                       ) : (
-                        <>Read Key Points <ChevronDown className="w-3.5 h-3.5 text-brand" /></>
+                        <>Read Key Points <ChevronDown className="w-3.5 h-3.5 text-brandText" /></>
                       )}
                     </button>
 

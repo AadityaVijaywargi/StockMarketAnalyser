@@ -44,10 +44,10 @@ export const PriceAlertsPanel: React.FC<PriceAlertsPanelProps> = ({ ticker, comp
         className="w-full flex items-center justify-between p-4 hover:bg-white/[0.02] transition-all"
       >
         <h3 className="font-bold text-sm text-white font-mono flex items-center gap-2">
-          <Bell className="w-4 h-4 text-brand" />
+          <Bell className="w-4 h-4 text-brandText" />
           <span>Price Alerts</span>
           {activeAlerts.length > 0 && (
-            <span className="text-[10px] font-mono bg-brand/15 text-brand border border-brand/30 px-2 py-0.5 rounded-full">
+            <span className="text-[10px] font-mono bg-brand/15 text-brandText border border-brand/30 px-2 py-0.5 rounded-full">
               {activeAlerts.length} active
             </span>
           )}
@@ -83,7 +83,7 @@ export const PriceAlertsPanel: React.FC<PriceAlertsPanelProps> = ({ ticker, comp
             <button
               onClick={handleAdd}
               disabled={!targetInput || parseFloat(targetInput) <= 0}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-brand text-black text-xs font-mono font-bold hover:brightness-110 disabled:opacity-40 disabled:pointer-events-none transition-all shrink-0"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-brand text-white text-xs font-mono font-bold hover:brightness-110 disabled:opacity-40 disabled:pointer-events-none transition-all shrink-0"
             >
               <BellPlus className="w-3.5 h-3.5" />
               <span>Set</span>

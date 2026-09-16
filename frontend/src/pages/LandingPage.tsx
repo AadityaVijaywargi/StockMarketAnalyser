@@ -75,7 +75,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onSearch, isLoading })
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.2 }}
-            className="flex items-center gap-2 px-3 py-1 rounded-full bg-white/[0.02] border border-borderDark text-[11px] font-semibold tracking-wider text-brand font-mono uppercase"
+            className="flex items-center gap-2 px-3 py-1 rounded-full bg-white/[0.02] border border-borderDark text-[11px] font-semibold tracking-wider text-brandText font-mono uppercase"
           >
             <Sparkles className="w-3.5 h-3.5" />
             <span>Institution-Grade Quant Model</span>
@@ -177,7 +177,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onSearch, isLoading })
 
           {/* Secure Engine indicator */}
           <div className="hidden lg:flex items-center gap-1.5 text-textMuted font-mono text-[10px] uppercase">
-            <Globe className="w-3.5 h-3.5 text-brand" />
+            <Globe className="w-3.5 h-3.5 text-brandText" />
             <span>Deterministic Node Active</span>
           </div>
         </div>

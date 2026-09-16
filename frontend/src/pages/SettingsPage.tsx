@@ -95,7 +95,7 @@ const InvitesPanel: React.FC = () => {
   return (
     <div className="bg-surface border border-borderDark p-5 rounded-2xl shadow-lg flex flex-col gap-4">
       <h3 className="font-bold text-sm text-white font-mono flex items-center gap-2">
-        <Ticket className="w-4 h-4 text-brand" />
+        <Ticket className="w-4 h-4 text-brandText" />
         <span>Invites</span>
       </h3>
       <p className="text-[11px] text-textMuted -mt-2">Invite-only access — generate a link for one email address at a time, then share it however you like.</p>
@@ -115,7 +115,7 @@ const InvitesPanel: React.FC = () => {
         <button
           onClick={handleGenerate}
           disabled={isGenerating || !inviteEmail.trim()}
-          className="px-3.5 py-2 rounded-lg bg-brand text-black text-xs font-mono font-bold hover:brightness-110 disabled:opacity-40 disabled:pointer-events-none transition-all shrink-0"
+          className="px-3.5 py-2 rounded-lg bg-brand text-white text-xs font-mono font-bold hover:brightness-110 disabled:opacity-40 disabled:pointer-events-none transition-all shrink-0"
         >
           {isGenerating ? 'Generating...' : 'Generate Invite'}
         </button>
@@ -224,7 +224,7 @@ const AllPriceAlertsPanel: React.FC = () => {
       >
         {alert.direction === 'above' ? <TrendingUp className="w-4 h-4 text-bullish shrink-0" /> : <TrendingDown className="w-4 h-4 text-bearish shrink-0" />}
         <div className="min-w-0">
-          <div className="text-xs font-mono font-bold text-white group-hover:text-brand transition-colors flex items-center gap-1">
+          <div className="text-xs font-mono font-bold text-white group-hover:text-brandText transition-colors flex items-center gap-1">
             {alert.ticker.replace('.NS', '').replace('.BO', '')}
             <ArrowUpRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
@@ -254,10 +254,10 @@ const AllPriceAlertsPanel: React.FC = () => {
   return (
     <div className="bg-surface border border-borderDark p-5 rounded-2xl shadow-lg flex flex-col gap-4">
       <h3 className="font-bold text-sm text-white font-mono flex items-center gap-2">
-        <Bell className="w-4 h-4 text-brand" />
+        <Bell className="w-4 h-4 text-brandText" />
         <span>Price Alerts</span>
         {active.length > 0 && (
-          <span className="text-[10px] font-mono bg-brand/15 text-brand border border-brand/30 px-2 py-0.5 rounded-full">
+          <span className="text-[10px] font-mono bg-brand/15 text-brandText border border-brand/30 px-2 py-0.5 rounded-full">
             {active.length} active
           </span>
         )}
@@ -312,7 +312,7 @@ export const SettingsPage: React.FC = () => {
 
       <div className="border-b border-borderDark/80 pb-5">
         <h1 className="font-extrabold text-2xl text-white tracking-tight flex items-center gap-2.5 font-mono">
-          <SettingsIcon className="w-6 h-6 text-brand" />
+          <SettingsIcon className="w-6 h-6 text-brandText" />
           <span>Settings</span>
         </h1>
         <p className="text-xs text-textMuted mt-1">Notification preferences and local data controls.</p>
@@ -321,7 +321,7 @@ export const SettingsPage: React.FC = () => {
       {/* Account */}
       <div className="bg-surface border border-borderDark p-5 rounded-2xl shadow-lg flex flex-col gap-4">
         <h3 className="font-bold text-sm text-white font-mono flex items-center gap-2">
-          <UserCircle2 className="w-4 h-4 text-brand" />
+          <UserCircle2 className="w-4 h-4 text-brandText" />
           <span>Account</span>
         </h3>
         <div className="flex items-center justify-between p-3 rounded-xl bg-background border border-borderDark/60">
@@ -345,7 +345,7 @@ export const SettingsPage: React.FC = () => {
       {/* Notification Preferences */}
       <div className="bg-surface border border-borderDark p-5 rounded-2xl shadow-lg flex flex-col gap-4">
         <h3 className="font-bold text-sm text-white font-mono flex items-center gap-2">
-          <Bell className="w-4 h-4 text-brand" />
+          <Bell className="w-4 h-4 text-brandText" />
           <span>Watchlist Alerts</span>
         </h3>
 

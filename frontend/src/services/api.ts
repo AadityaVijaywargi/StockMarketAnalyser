@@ -54,6 +54,25 @@ export const apiService = {
     return response.data;
   },
 
+  /**
+   * Submits a public access request. Unauthenticated by design - this is the
+   * marketing page CTA, reachable before anyone has an account.
+   *
+   * `company_website` is a honeypot the form hides from humans, and
+   * `rendered_at` is when the form was drawn; the server uses both to drop
+   * bot submissions. It answers 202 either way, so a resolved promise means
+   * "received", not necessarily "stored".
+   */
+  async submitAccessRequest(payload: {
+    email: string;
+    message: string;
+    company_website: string;
+    rendered_at: number;
+  }): Promise<{ accepted: boolean; message: string }> {
+    const response = await client.post('/access-requests', payload);
+    return response.data;
+  },
+
   async signup(inviteCode: string, email: string, username: string, password: string): Promise<{ access_token: string; username: string; role: string }> {
     const response = await client.post('/auth/signup', { invite_code: inviteCode, email, username, password });
     return response.data;

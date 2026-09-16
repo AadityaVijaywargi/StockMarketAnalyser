@@ -110,7 +110,7 @@ export const MarketOverviewPage: React.FC<MarketOverviewPageProps> = ({ onSearch
   if (loadingData && !data) {
     return (
       <div className="flex-1 bg-background flex flex-col items-center justify-center p-6 min-h-screen">
-        <div className="flex items-center gap-3 text-brand font-mono text-sm font-bold">
+        <div className="flex items-center gap-3 text-brandText font-mono text-sm font-bold">
           <RefreshCw className="w-5 h-5 animate-spin" />
           <span>Generating Market Intelligence Dashboard...</span>
         </div>
@@ -137,7 +137,7 @@ export const MarketOverviewPage: React.FC<MarketOverviewPageProps> = ({ onSearch
         <div className="flex flex-wrap items-center justify-between gap-4 pb-2 border-b border-borderDark/80">
           <div>
             <h1 className="text-xl font-bold text-white flex items-center gap-2.5">
-              <Globe className="w-6 h-6 text-brand" />
+              <Globe className="w-6 h-6 text-brandText" />
               <span>Market Intelligence Dashboard</span>
             </h1>
             <p className="text-xs text-textMuted mt-1">
@@ -149,7 +149,7 @@ export const MarketOverviewPage: React.FC<MarketOverviewPageProps> = ({ onSearch
             onClick={() => fetchOverview(true)}
             className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-surface border border-borderDark text-xs font-mono text-slate-300 hover:text-white hover:border-brand/40 transition-all cursor-pointer shadow-sm"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${loadingData ? 'animate-spin text-brand' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${loadingData ? 'animate-spin text-brandText' : ''}`} />
             <span>Refresh Intelligence</span>
           </button>
         </div>
@@ -164,11 +164,11 @@ export const MarketOverviewPage: React.FC<MarketOverviewPageProps> = ({ onSearch
 
           <div className="flex flex-wrap items-center justify-between gap-3 mb-4 pb-3 border-b border-borderDark/80">
             <div className="flex items-center gap-2.5">
-              <div className="p-2 rounded-xl bg-brand/15 border border-brand/30 text-brand">
+              <div className="p-2 rounded-xl bg-brand/15 border border-brand/30 text-brandText">
                 <Sparkles className="w-5 h-5" />
               </div>
               <div>
-                <h2 className="text-xs font-bold font-mono uppercase tracking-widest text-brand">AI Market Executive Summary</h2>
+                <h2 className="text-xs font-bold font-mono uppercase tracking-widest text-brandText">AI Market Executive Summary</h2>
                 <span className="text-[10px] text-textMuted font-mono">Updated: {new Date().toLocaleTimeString()}</span>
               </div>
             </div>
@@ -187,11 +187,11 @@ export const MarketOverviewPage: React.FC<MarketOverviewPageProps> = ({ onSearch
           {/* Key Drivers, Strong/Weak Sectors, Risks */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-background/80 border border-borderDark/80 p-3.5 rounded-xl">
-              <span className="text-[10px] font-bold font-mono text-brand uppercase block mb-1.5">Key Market Drivers</span>
+              <span className="text-[10px] font-bold font-mono text-brandText uppercase block mb-1.5">Key Market Drivers</span>
               <ul className="space-y-1 text-xs text-slate-300">
                 {ai.key_drivers?.map((d: string, i: number) => (
                   <li key={i} className="flex items-start gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-brand shrink-0 mt-0.5" />
+                    <CheckCircle2 className="w-3.5 h-3.5 text-brandText shrink-0 mt-0.5" />
                     <span>{d}</span>
                   </li>
                 ))}
@@ -291,7 +291,7 @@ export const MarketOverviewPage: React.FC<MarketOverviewPageProps> = ({ onSearch
                 <Star className="w-5 h-5 text-amber-400 fill-amber-400" />
                 <h3 className="text-sm font-bold text-white uppercase tracking-wider">Watchlist Overview</h3>
               </div>
-              <span className="text-xs font-mono text-brand font-bold">
+              <span className="text-xs font-mono text-brandText font-bold">
                 {watchlistSummary ? `${watchlistSummary.total} Saved` : 'No Saved Stocks'}
               </span>
             </div>
@@ -340,7 +340,7 @@ export const MarketOverviewPage: React.FC<MarketOverviewPageProps> = ({ onSearch
               <div className="text-center py-6 text-xs text-textMuted">
                 <Star className="w-8 h-8 text-slate-700 mx-auto mb-2" />
                 <p>No stocks currently in your watchlist.</p>
-                <p className="text-[10px] mt-1 text-brand">Search any ticker and click star to pin.</p>
+                <p className="text-[10px] mt-1 text-brandText">Search any ticker and click star to pin.</p>
               </div>
             )}
           </div>
@@ -350,7 +350,7 @@ export const MarketOverviewPage: React.FC<MarketOverviewPageProps> = ({ onSearch
         <div className="bg-surface border border-borderDark rounded-2xl p-6 shadow-xl">
           <div className="flex items-center justify-between pb-3 border-b border-borderDark/80 mb-4">
             <div className="flex items-center gap-2.5">
-              <Layers className="w-5 h-5 text-brand" />
+              <Layers className="w-5 h-5 text-brandText" />
               <h3 className="text-sm font-bold text-white uppercase tracking-wider">Sector Relative Strength & Performance</h3>
             </div>
             <span className="text-xs text-textMuted font-mono">{sectors.length} Sectors Sorted by Strength</span>
@@ -406,7 +406,7 @@ export const MarketOverviewPage: React.FC<MarketOverviewPageProps> = ({ onSearch
         <div className="bg-surface border border-borderDark rounded-2xl p-6 shadow-xl">
           <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-borderDark/80 mb-4">
             <div className="flex items-center gap-2.5">
-              <Target className="w-5 h-5 text-brand" />
+              <Target className="w-5 h-5 text-brandText" />
               <h3 className="text-sm font-bold text-white uppercase tracking-wider">Scanned Market Opportunities</h3>
             </div>
 
@@ -521,7 +521,7 @@ export const MarketOverviewPage: React.FC<MarketOverviewPageProps> = ({ onSearch
                 </div>
 
                 <div className="p-2.5 rounded-lg bg-surface border border-borderDark/60 text-[11px] text-slate-300 font-mono">
-                  <span className="text-brand font-bold block mb-0.5">Impact:</span>
+                  <span className="text-brandText font-bold block mb-0.5">Impact:</span>
                   <span>{risk.impact_note}</span>
                 </div>
               </div>

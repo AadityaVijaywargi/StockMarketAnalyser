@@ -65,7 +65,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onSearchClick }) => {
 
   const menuItems = [
     { name: 'Dashboard', path: `/dashboard/${lastStock}`, icon: LayoutDashboard },
-    { name: 'Analyze Stock', path: '/', icon: Search, action: onSearchClick },
+    { name: 'Analyze Stock', path: '/app', icon: Search, action: onSearchClick },
     { name: 'Watchlist', path: '/watchlist', icon: Star },
     { name: 'Market Overview', path: '/market', icon: Globe },
     { name: 'Portfolio', path: '/portfolio', icon: Briefcase },
@@ -116,7 +116,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onSearchClick }) => {
           </button>
         )}
         <Link
-          to="/"
+          to="/app"
           onClick={onSearchClick}
           aria-label="Go to Home"
           className="p-6 flex items-center gap-3 border-b border-borderDark cursor-pointer hover:opacity-90 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 outline-none focus:ring-1 focus:ring-brand/30"
@@ -137,8 +137,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ onSearchClick }) => {
             // Match subpaths like /dashboard/TCS or /watchlist
             const isActive = item.name === 'Dashboard' 
               ? location.pathname.startsWith('/dashboard') 
-              : item.path !== '/' && item.path !== '#' && location.pathname.startsWith(item.path);
-            const isHomeActive = item.path === '/' && location.pathname === '/';
+              : item.path !== '/app' && item.path !== '#' && location.pathname.startsWith(item.path);
+            const isHomeActive = item.path === '/app' && location.pathname === '/app';
             
             if (item.action) {
               return (
@@ -147,7 +147,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onSearchClick }) => {
                   onClick={item.action}
                   className={`flex items-center gap-3 p-3 rounded-lg text-sm font-medium transition-all w-full text-left ${
                     isHomeActive 
-                      ? 'bg-brand/10 text-brand border-l-2 border-brand font-semibold' 
+                      ? 'bg-brand/10 text-brandText border-l-2 border-brand font-semibold' 
                       : 'text-textMuted hover:text-white hover:bg-white/[0.05]'
                   }`}
                 >
@@ -163,7 +163,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onSearchClick }) => {
                 to={item.path}
                 className={`flex items-center gap-3 p-3 rounded-lg text-sm font-medium transition-all ${
                   isActive 
-                    ? 'bg-brand/10 text-brand border-l-2 border-brand font-semibold' 
+                    ? 'bg-brand/10 text-brandText border-l-2 border-brand font-semibold' 
                     : 'text-textMuted hover:text-white hover:bg-white/[0.05]'
                 }`}
               >

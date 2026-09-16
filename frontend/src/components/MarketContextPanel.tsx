@@ -30,7 +30,7 @@ export const MarketContextPanel: React.FC<MarketContextPanelProps> = ({ context 
     <div className="bg-surface border border-borderDark p-6 rounded-xl flex flex-col gap-6">
       <div className="flex items-center gap-3 border-b border-borderDark pb-4">
         <div className="w-8 h-8 rounded bg-brand/10 border border-brand/20 flex items-center justify-center">
-          <Globe2 className="w-4 h-4 text-brand" />
+          <Globe2 className="w-4 h-4 text-brandText" />
         </div>
         <h3 className="font-bold text-base text-white">Market Context Engine</h3>
       </div>
@@ -136,7 +136,7 @@ export const MarketContextPanel: React.FC<MarketContextPanelProps> = ({ context 
       {/* Stock relationship metrics */}
       <div className="mt-4 pt-4 border-t border-borderDark/40 grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="bg-background border border-borderDark/60 p-3 rounded-lg flex items-center gap-3">
-          <div className="text-brand">
+          <div className="text-brandText">
             <BarChart2 className="w-5 h-5" />
           </div>
           <div>
