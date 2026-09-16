@@ -89,5 +89,13 @@ FAILED_LOGINS_PER_USERNAME = SlidingWindowLimiter(max_events=10, window_seconds=
 FAILED_LOGINS_PER_IP = SlidingWindowLimiter(max_events=20, window_seconds=15 * 60)
 # Every signup attempt hashes a password, so limit attempts, not just failures.
 SIGNUPS_PER_IP = SlidingWindowLimiter(max_events=10, window_seconds=60 * 60)
+# The public access-request form. A person submits once; anything past a
+# handful an hour from one address is a bot working through a list.
+ACCESS_REQUESTS_PER_IP = SlidingWindowLimiter(max_events=5, window_seconds=60 * 60)
 
-ALL_LIMITERS = (FAILED_LOGINS_PER_USERNAME, FAILED_LOGINS_PER_IP, SIGNUPS_PER_IP)
+ALL_LIMITERS = (
+    FAILED_LOGINS_PER_USERNAME,
+    FAILED_LOGINS_PER_IP,
+    SIGNUPS_PER_IP,
+    ACCESS_REQUESTS_PER_IP,
+)

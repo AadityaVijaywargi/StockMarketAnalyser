@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from api.routers import health, analysis, market_opportunities, intelligence, backtest, auth, user_data
+from api.routers import health, analysis, market_opportunities, intelligence, backtest, auth, user_data, access
 from api.auth import decode_access_token
 from api.exceptions import PlatformException, platform_exception_handler, generic_exception_handler
 from api.security import register_security
@@ -10,7 +10,15 @@ from config.settings import settings
 import jwt
 
 # Paths reachable without a login session
-PUBLIC_PATHS = {"/", "/health", "/auth/login", "/auth/signup", "/docs", "/openapi.json", "/redoc"}
+# Paths reachable without a login session.
+# Note /access-requests is public for POST only - the GET and DELETE on the
+# same path are admin review endpoints, guarded by the route dependency
+# rather than by this set, which cannot distinguish methods.
+PUBLIC_PATHS = {
+    "/", "/health", "/auth/login", "/auth/signup",
+    "/access-requests",
+    "/docs", "/openapi.json", "/redoc",
+}
 
 def create_app() -> FastAPI:
     """
@@ -81,6 +89,7 @@ def create_app() -> FastAPI:
     app.include_router(intelligence.router)
     app.include_router(backtest.router)
     app.include_router(user_data.router)
+    app.include_router(access.router)
 
     # Register Centralized Error Handlers
     app.add_exception_handler(PlatformException, platform_exception_handler)
