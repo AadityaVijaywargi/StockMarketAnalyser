@@ -21,6 +21,7 @@ storage/news/
 storage/reports/
 storage/test_uncached/
 storage/users.json
+storage/access_requests.json
 storage/user_data/
 
 # Frontend

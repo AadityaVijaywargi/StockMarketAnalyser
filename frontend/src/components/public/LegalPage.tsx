@@ -33,13 +33,13 @@ export const LegalPage: React.FC<LegalPageProps> = ({ title, description, canoni
         <div className="flex flex-col gap-8">{children}</div>
 
         <footer className="mt-12 pt-8 border-t border-borderDark flex flex-wrap gap-x-5 gap-y-2">
-          <Link to="/privacy" className="text-xs text-textMuted hover:text-white transition-colors">
+          <Link to="/privacy" className="inline-flex items-center min-h-[24px] py-1 text-xs text-textMuted hover:text-white transition-colors">
             Privacy Policy
           </Link>
-          <Link to="/terms" className="text-xs text-textMuted hover:text-white transition-colors">
+          <Link to="/terms" className="inline-flex items-center min-h-[24px] py-1 text-xs text-textMuted hover:text-white transition-colors">
             Terms of Service
           </Link>
-          <Link to="/cookies" className="text-xs text-textMuted hover:text-white transition-colors">
+          <Link to="/cookies" className="inline-flex items-center min-h-[24px] py-1 text-xs text-textMuted hover:text-white transition-colors">
             Cookie Policy
           </Link>
         </footer>

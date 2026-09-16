@@ -109,6 +109,8 @@ export const MarketingPage: React.FC = () => {
             <div className="flex flex-col sm:flex-row items-center gap-3 mt-2 w-full sm:w-auto">
               <Link
                 to="/request-access"
+                data-umami-event="cta-request-access"
+                data-umami-event-location="hero"
                 className="group w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-brand hover:brightness-110 text-white font-bold text-sm transition-all shadow-lg shadow-brand/20"
               >
                 Request access
@@ -185,6 +187,8 @@ export const MarketingPage: React.FC = () => {
         </p>
         <Link
           to="/request-access"
+          data-umami-event="cta-request-access"
+          data-umami-event-location="footer"
           className="group inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-brand hover:brightness-110 text-white font-bold text-sm transition-all shadow-lg shadow-brand/20"
         >
           Request access

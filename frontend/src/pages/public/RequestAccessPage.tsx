@@ -6,6 +6,7 @@ import { PublicLayout } from '../../components/public/PublicLayout';
 import { useDocumentMeta } from '../../hooks/useDocumentMeta';
 import { apiService } from '../../services/api';
 import { SITE_NAME } from '../../config/site';
+import { trackEvent } from '../../services/analytics';
 import { MAX_MESSAGE_LENGTH, validateAccessRequest, AccessRequestErrors } from '../../utils/access_request_validation';
 
 /**
@@ -66,6 +67,7 @@ export const RequestAccessPage: React.FC = () => {
         company_website: honeypot,
         rendered_at: renderedAt,
       });
+      trackEvent('access-request-submitted');
       setIsDone(true);
     } catch (err: any) {
       const status = err?.response?.status;

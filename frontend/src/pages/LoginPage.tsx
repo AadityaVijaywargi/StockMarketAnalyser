@@ -4,8 +4,10 @@ import { Lock, Loader2, AlertCircle, TrendingUp, User, Eye, EyeOff } from 'lucid
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { AuthLayout } from '../components/AuthLayout';
+import { useDocumentMeta } from '../hooks/useDocumentMeta';
 
 export const LoginPage: React.FC = () => {
+  useDocumentMeta({ title: 'Sign in', noIndex: true });
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);

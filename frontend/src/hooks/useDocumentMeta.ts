@@ -33,7 +33,8 @@ const setMetaTag = (selector: string, attr: 'name' | 'property', key: string, co
 
 export const useDocumentMeta = ({ title, description, canonicalPath, noIndex }: DocumentMeta): void => {
   useEffect(() => {
-    const fullTitle = title === SITE_NAME ? title : `${title} — ${SITE_NAME}`;
+    // Titles that already lead with the brand (the home page) are used as-is.
+    const fullTitle = title.startsWith(SITE_NAME) ? title : `${title} — ${SITE_NAME}`;
     document.title = fullTitle;
 
     if (description) {

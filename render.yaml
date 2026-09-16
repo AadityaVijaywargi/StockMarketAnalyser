@@ -8,6 +8,15 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.10.4
+      - key: ENV
+        value: production
+      # Browser origins allowed to call the API. Required: without it CORS
+      # only admits localhost and the deployed frontend is blocked. Add any
+      # custom domain here, comma-separated.
+      - key: ALLOWED_ORIGINS
+        value: https://stock-market-analyser-vert.vercel.app
+      - key: SITE_URL
+        value: https://stock-market-analyser-vert.vercel.app
       - key: GOOGLE_API_KEY
         sync: false
       # Set these in the Render dashboard (sync: false = never stored in git).

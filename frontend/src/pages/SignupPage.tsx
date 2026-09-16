@@ -4,8 +4,10 @@ import { UserPlus, Loader2, AlertCircle, TrendingUp, User, Mail, KeyRound, Lock,
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { AuthLayout } from '../components/AuthLayout';
+import { useDocumentMeta } from '../hooks/useDocumentMeta';
 
 export const SignupPage: React.FC = () => {
+  useDocumentMeta({ title: 'Create your account', noIndex: true });
   const [searchParams] = useSearchParams();
   const [inviteCode, setInviteCode] = useState(searchParams.get('code') || '');
   const [email, setEmail] = useState(searchParams.get('email') || '');

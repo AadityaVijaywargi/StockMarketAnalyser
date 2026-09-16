@@ -47,25 +47,28 @@ export const PublicLayout: React.FC<PublicLayoutProps> = ({ children, hideCta })
             </span>
             <span className="flex flex-col leading-none">
               <span className="font-bold text-base tracking-wider">{SITE_NAME}</span>
-              <span className="text-[9px] text-textMuted tracking-wider font-mono uppercase mt-0.5">
+              <span className="hidden sm:block text-[9px] text-textMuted tracking-wider font-mono uppercase mt-0.5">
                 {SITE_TAGLINE}
               </span>
             </span>
           </Link>
 
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
             <NavLink
               to="/login"
-              className="px-3 py-2 rounded-lg text-sm font-semibold text-textMuted hover:text-white transition-colors"
+              className="px-2.5 sm:px-3 py-2 rounded-lg text-sm font-semibold text-textMuted hover:text-white transition-colors whitespace-nowrap"
             >
               Sign in
             </NavLink>
             {!hideCta && (
               <Link
                 to="/request-access"
+                data-umami-event="cta-request-access"
+                data-umami-event-location="header"
                 className="px-3.5 sm:px-4 py-2 rounded-lg bg-brand hover:brightness-110 text-white text-sm font-bold transition-all whitespace-nowrap"
               >
-                Request access
+                <span className="sm:hidden">Get access</span>
+                <span className="hidden sm:inline">Request access</span>
               </Link>
             )}
           </div>
@@ -96,7 +99,7 @@ export const PublicLayout: React.FC<PublicLayoutProps> = ({ children, hideCta })
                 <li key={link.to}>
                   <Link
                     to={link.to}
-                    className="text-xs text-textMuted hover:text-white transition-colors"
+                    className="inline-flex items-center min-h-[24px] py-1 text-xs text-textMuted hover:text-white transition-colors"
                   >
                     {link.label}
                   </Link>
@@ -105,7 +108,7 @@ export const PublicLayout: React.FC<PublicLayoutProps> = ({ children, hideCta })
               <li>
                 <a
                   href={`mailto:${CONTACT_EMAIL}`}
-                  className="text-xs text-textMuted hover:text-white transition-colors"
+                  className="inline-flex items-center min-h-[24px] py-1 text-xs text-textMuted hover:text-white transition-colors"
                 >
                   Contact
                 </a>

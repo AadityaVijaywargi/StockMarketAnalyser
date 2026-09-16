@@ -98,11 +98,18 @@ def test_allowed_origin_list_parses_and_strips_trailing_slashes():
     assert s.allowed_origin_list == ["https://a.example.com", "https://b.example.com"]
 
 
-def test_allowed_origin_list_falls_back_to_dev_origins_when_unset():
-    assert Settings(ALLOWED_ORIGINS="").allowed_origin_list == [
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-    ]
+def test_unset_origins_fall_back_to_any_localhost_port():
+    import re
+    s = Settings(ALLOWED_ORIGINS="")
+    assert s.allowed_origin_list == []
+    for ok in ["http://localhost:5173", "http://localhost:5190", "http://127.0.0.1:5199", "http://localhost"]:
+        assert re.match(s.allowed_origin_regex, ok)
+    for bad in ["https://evil.example.com", "http://localhost.evil.com", "http://evil.com/?http://localhost:5173"]:
+        assert not re.match(s.allowed_origin_regex, bad)
+
+
+def test_configured_origins_disable_the_localhost_fallback():
+    assert Settings(ALLOWED_ORIGINS="https://good.example.com").allowed_origin_regex is None
 
 
 def test_unlisted_origin_gets_no_cors_approval(monkeypatch):

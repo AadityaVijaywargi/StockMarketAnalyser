@@ -1,5 +1,5 @@
 import os
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from config.weights import DEFAULT_SCORE_WEIGHTS, DEFAULT_BUY_THRESHOLD, DEFAULT_WATCH_THRESHOLD, INDICATOR_SETTINGS, PREDICTION_HORIZON_WEIGHTS, EVENT_OVERRIDE_IMPORTANCE_THRESHOLD
@@ -84,16 +84,19 @@ class Settings(BaseSettings):
 
     @property
     def allowed_origin_list(self) -> List[str]:
-        """
-        Parsed ALLOWED_ORIGINS, falling back to local dev origins when unset.
+        """Parsed ALLOWED_ORIGINS (empty when unset)."""
+        return [o.strip().rstrip("/") for o in self.ALLOWED_ORIGINS.split(",") if o.strip()]
 
-        Note the fallback is dev-only: startup_checks refuses to boot a
-        production deployment that has not configured this explicitly.
+    @property
+    def allowed_origin_regex(self) -> Optional[str]:
         """
-        origins = [o.strip().rstrip("/") for o in self.ALLOWED_ORIGINS.split(",") if o.strip()]
-        if origins:
-            return origins
-        return ["http://localhost:5173", "http://127.0.0.1:5173"]
+        Dev-only fallback when ALLOWED_ORIGINS is unset: any localhost port,
+        since the Vite dev and preview servers run on several. startup_checks
+        warns when a production deploy relies on this.
+        """
+        if self.allowed_origin_list:
+            return None
+        return r"^http://(localhost|127\.0\.0\.1)(:\d+)?$"
 
     # Authentication Settings
     JWT_SECRET_KEY: str = Field(default="", description="Secret key used to sign login session tokens")

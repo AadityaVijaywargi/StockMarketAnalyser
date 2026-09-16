@@ -1,0 +1,17 @@
+# Public marketing and legal pages are crawlable. Everything behind the
+# login renders only a sign-in redirect to a crawler, so it is excluded.
+User-agent: *
+Allow: /
+Disallow: /app
+Disallow: /dashboard/
+Disallow: /watchlist
+Disallow: /market
+Disallow: /portfolio
+Disallow: /backtesting
+Disallow: /settings
+Disallow: /chart/
+Disallow: /compare
+Disallow: /login
+Disallow: /signup
+
+Sitemap: https://stock-market-analyser-vert.vercel.app/sitemap.xml
