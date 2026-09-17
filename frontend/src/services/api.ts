@@ -6,6 +6,14 @@ export type RecommendationRefresh = Pick<
   'scores' | 'risk_profile' | 'positive_factors' | 'negative_factors' | 'neutral_factors'
 >;
 
+export interface AccessRequest {
+  id: string;
+  email: string;
+  message: string;
+  created_at: string;
+  status: 'pending' | 'invited' | string;
+}
+
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8002';
 const TOKEN_KEY = 'stonks_auth_token';
 
@@ -90,6 +98,22 @@ export const apiService = {
 
   async revokeInvite(code: string): Promise<void> {
     await client.delete(`/auth/invites/${code}`);
+  },
+
+  // Access-request review queue (admin only).
+  async listAccessRequests(): Promise<AccessRequest[]> {
+    const response = await client.get('/access-requests');
+    return response.data;
+  },
+
+  /** Issues an invite for the request's email and marks the request invited. */
+  async approveAccessRequest(id: string): Promise<{ code: string; email: string }> {
+    const response = await client.post(`/access-requests/${encodeURIComponent(id)}/approve`);
+    return response.data;
+  },
+
+  async deleteAccessRequest(id: string): Promise<void> {
+    await client.delete(`/access-requests/${encodeURIComponent(id)}`);
   },
 
   /**

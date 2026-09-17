@@ -7,7 +7,7 @@ import time
 import pytest
 from fastapi.testclient import TestClient
 
-from api import access_request_store, rate_limit
+from api import access_request_store, rate_limit, user_store
 from api.api import create_app
 from api.auth import create_access_token
 from api.routers import access
@@ -24,6 +24,7 @@ NO_AUTH = {"Authorization": ""}
 def isolated_store(monkeypatch, tmp_path):
     monkeypatch.setattr(settings, "DATABASE_URL", "")
     monkeypatch.setattr(access_request_store, "_STORE_PATH", str(tmp_path / "access_requests.json"))
+    monkeypatch.setattr(user_store, "_STORE_PATH", str(tmp_path / "users.json"))
     for limiter in rate_limit.ALL_LIMITERS:
         limiter.reset()
     yield
@@ -196,3 +197,51 @@ def test_public_post_does_not_expose_other_peoples_requests():
     # The response must carry only an acknowledgement, never the queue.
     assert set(body) == {"accepted", "message"}
     assert "first@example.com" not in str(body)
+
+
+# --------------------------------------------------------------------------
+# Approval
+# --------------------------------------------------------------------------
+
+def _only_request_id():
+    return client.get("/access-requests").json()[0]["id"]
+
+
+def test_approve_creates_invite_for_the_requested_email_and_marks_invited():
+    submit(email="approve.me@example.com")
+    request_id = _only_request_id()
+
+    response = client.post(f"/access-requests/{request_id}/approve")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["email"] == "approve.me@example.com"
+
+    invites = user_store.list_invites()
+    assert invites[body["code"]]["email"] == "approve.me@example.com"
+    assert client.get("/access-requests").json()[0]["status"] == "invited"
+
+
+def test_approving_twice_issues_a_fresh_code():
+    submit()
+    request_id = _only_request_id()
+    first = client.post(f"/access-requests/{request_id}/approve").json()["code"]
+    second = client.post(f"/access-requests/{request_id}/approve").json()["code"]
+    assert first != second
+
+
+def test_approve_unknown_request_is_404():
+    assert client.post("/access-requests/nope/approve").status_code == 404
+
+
+def test_approve_requires_admin():
+    submit()
+    request_id = _only_request_id()
+    user_token = create_access_token("regular-user", role="user")
+    response = client.post(
+        f"/access-requests/{request_id}/approve",
+        headers={"Authorization": f"Bearer {user_token}"},
+    )
+    assert response.status_code == 403
+    assert user_store.list_invites() == {}
+    # Without any session the auth middleware rejects it before the route runs.
+    assert client.post(f"/access-requests/{request_id}/approve", headers=NO_AUTH).status_code == 401

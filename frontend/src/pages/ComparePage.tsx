@@ -206,7 +206,7 @@ export const ComparePage: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen bg-background text-text font-sans p-6 md:p-8 flex flex-col gap-6 max-w-6xl mx-auto">
+    <div className="w-full min-h-screen bg-background text-text font-sans p-6 md:p-8 flex flex-col gap-6 max-w-6xl mx-auto">
       <div className="border-b border-borderDark/80 pb-5">
         <h1 className="font-extrabold text-2xl text-white tracking-tight flex items-center gap-2.5 font-mono">
           <GitCompare className="w-6 h-6 text-brandText" />

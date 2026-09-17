@@ -24,6 +24,9 @@ from api import db
 _LOCK = threading.Lock()
 _STORE_PATH = os.path.join(settings.STORAGE_BASE, "access_requests.json")
 
+STATUS_PENDING = "pending"
+STATUS_INVITED = "invited"
+
 # Anything longer is a bot pasting an essay, not a person asking for access.
 MAX_MESSAGE_LENGTH = 2000
 MAX_EMAIL_LENGTH = 254  # RFC 5321 maximum
@@ -122,6 +125,35 @@ def list_requests() -> List[Dict[str, Any]]:
         data = _load()
         rows = [{"id": rid, **info} for rid, info in data["requests"].items()]
     return sorted(rows, key=lambda r: r.get("created_at") or "", reverse=True)
+
+
+def get_request(request_id: str) -> Optional[Dict[str, Any]]:
+    """A single request by id, or None."""
+    if db.is_configured():
+        with db.get_cursor() as cur:
+            cur.execute("SELECT * FROM access_requests WHERE id = %s", (request_id,))
+            row = cur.fetchone()
+            return dict(row) if row else None
+
+    with _LOCK:
+        info = _load()["requests"].get(request_id)
+    return {"id": request_id, **info} if info else None
+
+
+def set_status(request_id: str, new_status: str) -> bool:
+    """Updates a request's status. Returns False when the id was not found."""
+    if db.is_configured():
+        with db.get_cursor() as cur:
+            cur.execute("UPDATE access_requests SET status = %s WHERE id = %s", (new_status, request_id))
+            return cur.rowcount > 0
+
+    with _LOCK:
+        data = _load()
+        if request_id not in data["requests"]:
+            return False
+        data["requests"][request_id]["status"] = new_status
+        _save(data)
+        return True
 
 
 def delete_request(request_id: str) -> bool:

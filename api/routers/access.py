@@ -26,7 +26,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, EmailStr, Field
 
-from api import access_request_store, rate_limit
+from api import access_request_store, rate_limit, user_store
 # Reuses the auth router's admin gate rather than re-implementing the role
 # check, so there is one definition of what "admin" means.
 from api.routers.auth import _require_admin as require_admin
@@ -128,3 +128,26 @@ def delete_access_request(request_id: str, admin=Depends(require_admin)):
     if not access_request_store.delete_request(request_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Request not found")
     return {"deleted": request_id}
+
+
+class ApproveResponse(BaseModel):
+    code: str
+    email: str
+
+
+@router.post("/access-requests/{request_id}/approve", response_model=ApproveResponse)
+def approve_access_request(request_id: str, admin=Depends(require_admin)):
+    """
+    Issues an invite for the request's email and marks the request invited,
+    so the review queue and the invite list cannot drift apart.
+
+    Approving an already-invited request issues a fresh code - useful when
+    the first one was lost - rather than failing.
+    """
+    found = access_request_store.get_request(request_id)
+    if not found:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Request not found")
+
+    code = user_store.create_invite(created_by=admin["sub"], email=found["email"])
+    access_request_store.set_status(request_id, access_request_store.STATUS_INVITED)
+    return ApproveResponse(code=code, email=found["email"])

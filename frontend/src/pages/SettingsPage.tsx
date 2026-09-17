@@ -7,6 +7,8 @@ import { useNavigate } from 'react-router-dom';
 import { priceAlertsService, PRICE_ALERTS_UPDATED_EVENT } from '../services/price_alerts_service';
 import { watchlistMonitorService, WATCHLIST_MONITOR_UPDATED_EVENT } from '../services/watchlist_monitor_service';
 import { PriceAlert } from '../types';
+import { AccessRequestsPanel } from '../components/AccessRequestsPanel';
+import { buildInviteLink, buildInviteMailto } from '../utils/invite_links';
 
 interface InviteInfo {
   code: string;
@@ -19,7 +21,7 @@ interface InviteInfo {
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-const InvitesPanel: React.FC = () => {
+const InvitesPanel: React.FC<{ refreshKey: number }> = ({ refreshKey }) => {
   const [invites, setInvites] = useState<InviteInfo[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -39,7 +41,8 @@ const InvitesPanel: React.FC = () => {
     }
   };
 
-  useEffect(() => { refresh(); }, []);
+  // refreshKey bumps when the access-requests panel issues an invite.
+  useEffect(() => { refresh(); }, [refreshKey]);
 
   const handleGenerate = async () => {
     setError(null);
@@ -69,27 +72,16 @@ const InvitesPanel: React.FC = () => {
     }
   };
 
-  const buildLink = (invite: InviteInfo) => {
-    const params = new URLSearchParams({ code: invite.code });
-    if (invite.email) params.set('email', invite.email);
-    return `${window.location.origin}/signup?${params.toString()}`;
-  };
-
   const handleCopy = (invite: InviteInfo) => {
-    navigator.clipboard.writeText(buildLink(invite)).then(() => {
+    navigator.clipboard.writeText(buildInviteLink(invite.code, invite.email)).then(() => {
       setCopiedCode(invite.code);
       setTimeout(() => setCopiedCode(null), 2000);
     }).catch(() => setError('Could not copy to clipboard — copy the code manually.'));
   };
 
-  // No SMTP/email service is configured, so this opens the admin's own
-  // mail client pre-filled with the invite link rather than sending
-  // anything server-side.
   const handleEmailInvite = (invite: InviteInfo) => {
     if (!invite.email) return;
-    const subject = encodeURIComponent('Your STONKS invite');
-    const body = encodeURIComponent(`You've been invited to STONKS. Sign up here:\n\n${buildLink(invite)}`);
-    window.location.href = `mailto:${invite.email}?subject=${subject}&body=${body}`;
+    window.location.href = buildInviteMailto(invite.code, invite.email);
   };
 
   return (
@@ -289,6 +281,7 @@ export const SettingsPage: React.FC = () => {
   const [confirmReset, setConfirmReset] = useState<boolean>(false);
   const [resetDone, setResetDone] = useState<boolean>(false);
   const { username, isAdmin, logout } = useAuth();
+  const [inviteRefreshKey, setInviteRefreshKey] = useState(0);
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -308,7 +301,7 @@ export const SettingsPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background text-text font-sans p-6 md:p-8 flex flex-col gap-6 max-w-3xl mx-auto">
+    <div className="w-full min-h-screen bg-background text-text font-sans p-6 md:p-8 flex flex-col gap-6 max-w-3xl mx-auto">
 
       <div className="border-b border-borderDark/80 pb-5">
         <h1 className="font-extrabold text-2xl text-white tracking-tight flex items-center gap-2.5 font-mono">
@@ -340,7 +333,12 @@ export const SettingsPage: React.FC = () => {
       </div>
 
       {/* Invites (admin only) */}
-      {isAdmin && <InvitesPanel />}
+      {isAdmin && (
+        <>
+          <AccessRequestsPanel onInviteCreated={() => setInviteRefreshKey(k => k + 1)} />
+          <InvitesPanel refreshKey={inviteRefreshKey} />
+        </>
+      )}
 
       {/* Notification Preferences */}
       <div className="bg-surface border border-borderDark p-5 rounded-2xl shadow-lg flex flex-col gap-4">
