@@ -194,7 +194,7 @@ export const WatchlistPage: React.FC<{ onSearch: (ticker: string) => void; isLoa
               <div>
                 <h1 className="text-2xl font-bold tracking-tight text-white font-mono flex items-center gap-2">
                   <span>Monitored Watchlist</span>
-                  <span className="text-xs px-2.5 py-0.5 rounded-full bg-brand/10 text-brand border border-brand/20 font-sans">
+                  <span className="text-xs px-2.5 py-0.5 rounded-full bg-brand/10 text-brandText border border-brand/20 font-sans">
                     {items.length} {items.length === 1 ? 'Stock' : 'Stocks'}
                   </span>
                 </h1>
@@ -212,7 +212,7 @@ export const WatchlistPage: React.FC<{ onSearch: (ticker: string) => void; isLoa
               <span className="text-slate-300 font-bold">Monitor: {monitorHealth.status}</span>
             </div>
             <span className="text-borderDark">|</span>
-            <span className="text-textMuted">Cache Hit: <strong className="text-brand">{monitorHealth.cache_hit_rate}%</strong></span>
+            <span className="text-textMuted">Cache Hit: <strong className="text-brandText">{monitorHealth.cache_hit_rate}%</strong></span>
             <span className="text-borderDark">|</span>
             <span className="text-textMuted">Avg: <strong className="text-white">{monitorHealth.avg_refresh_time_ms}ms</strong></span>
           </div>
@@ -271,12 +271,12 @@ export const WatchlistPage: React.FC<{ onSearch: (ticker: string) => void; isLoa
               exit={{ opacity: 0, height: 0 }}
               className="flex items-center justify-between gap-4 bg-brand/10 border border-brand/30 px-4 py-3 rounded-2xl overflow-hidden"
             >
-              <span className="text-xs font-mono font-bold text-brand">{selectedTickers.size} selected</span>
+              <span className="text-xs font-mono font-bold text-brandText">{selectedTickers.size} selected</span>
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleCompareSelected}
                   disabled={selectedTickers.size < 2}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand text-black text-xs font-mono font-bold hover:brightness-110 disabled:opacity-40 disabled:pointer-events-none transition-all"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand text-white text-xs font-mono font-bold hover:brightness-110 disabled:opacity-40 disabled:pointer-events-none transition-all"
                 >
                   <GitCompare className="w-3.5 h-3.5" />
                   <span>Compare Selected</span>
@@ -376,8 +376,8 @@ export const WatchlistPage: React.FC<{ onSearch: (ticker: string) => void; isLoa
                         className={`hover:bg-white/[0.03] cursor-pointer transition-colors group ${isSelected ? 'bg-brand/5' : ''} ${item.pinned ? 'bg-amber-500/[0.03]' : ''}`}
                       >
                         <td className="py-4 px-3 text-center" onClick={e => handleToggleSelect(e, item.ticker)}>
-                          <button className="text-textMuted hover:text-brand transition-colors">
-                            {isSelected ? <CheckSquare className="w-4 h-4 text-brand" /> : <Square className="w-4 h-4" />}
+                          <button className="text-textMuted hover:text-brandText transition-colors">
+                            {isSelected ? <CheckSquare className="w-4 h-4 text-brandText" /> : <Square className="w-4 h-4" />}
                           </button>
                         </td>
                         <td className="py-4 px-2 text-center" onClick={e => handleTogglePin(e, item.ticker)}>
@@ -395,7 +395,7 @@ export const WatchlistPage: React.FC<{ onSearch: (ticker: string) => void; isLoa
                         </td>
                         <td className="py-4 px-4">
                           <div className="flex flex-col">
-                            <span className="font-bold text-white group-hover:text-brand transition-colors text-sm">{item.company_name}</span>
+                            <span className="font-bold text-white group-hover:text-brandText transition-colors text-sm">{item.company_name}</span>
                             <span className="text-[10px] font-mono text-textMuted">{item.ticker} • {item.exchange}</span>
                           </div>
                         </td>
@@ -455,14 +455,14 @@ export const WatchlistPage: React.FC<{ onSearch: (ticker: string) => void; isLoa
                                 className="flex items-center gap-1 text-[11px] text-textMuted hover:text-white transition-colors max-w-[140px]"
                                 title={item.notes || 'Add a note'}
                               >
-                                <StickyNote className={`w-3 h-3 shrink-0 ${item.notes ? 'text-brand' : ''}`} />
+                                <StickyNote className={`w-3 h-3 shrink-0 ${item.notes ? 'text-brandText' : ''}`} />
                                 <span className="truncate">{item.notes || 'Add note'}</span>
                               </button>
                             )}
 
                             <div className="flex flex-wrap items-center gap-1 justify-center">
                               {(item.tags || []).map(tag => (
-                                <span key={tag} className="flex items-center gap-1 text-[9px] font-mono bg-brand/10 text-brand border border-brand/20 px-1.5 py-0.5 rounded-full">
+                                <span key={tag} className="flex items-center gap-1 text-[9px] font-mono bg-brand/10 text-brandText border border-brand/20 px-1.5 py-0.5 rounded-full">
                                   {tag}
                                   <button onClick={() => removeTag(item.ticker, tag)} className="hover:text-white">
                                     <X className="w-2.5 h-2.5" />
@@ -482,7 +482,7 @@ export const WatchlistPage: React.FC<{ onSearch: (ticker: string) => void; isLoa
                               ) : (
                                 <button
                                   onClick={e => openTagInput(e, item.ticker)}
-                                  className="flex items-center gap-0.5 text-[9px] font-mono text-textMuted hover:text-brand border border-borderDark hover:border-brand/40 px-1.5 py-0.5 rounded-full transition-colors"
+                                  className="flex items-center gap-0.5 text-[9px] font-mono text-textMuted hover:text-brandText border border-borderDark hover:border-brand/40 px-1.5 py-0.5 rounded-full transition-colors"
                                 >
                                   <TagIcon className="w-2.5 h-2.5" /><Plus className="w-2 h-2" />
                                 </button>
@@ -507,7 +507,7 @@ export const WatchlistPage: React.FC<{ onSearch: (ticker: string) => void; isLoa
                           ) : (
                             <button
                               onClick={e => openQuickAlert(e, item.ticker)}
-                              className="text-textMuted hover:text-brand transition-colors"
+                              className="text-textMuted hover:text-brandText transition-colors"
                               title="Set a price alert"
                             >
                               <Bell className="w-3.5 h-3.5" />
@@ -575,14 +575,14 @@ export const WatchlistPage: React.FC<{ onSearch: (ticker: string) => void; isLoa
               {/* Drawer Header Toolbar */}
               <div className="flex items-center justify-between border-b border-borderDark pb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-brand/10 border border-brand/20 flex items-center justify-center text-brand font-mono font-bold text-sm">
+                  <div className="w-10 h-10 rounded-xl bg-brand/10 border border-brand/20 flex items-center justify-center text-brandText font-mono font-bold text-sm">
                     {selectedInlineTicker.slice(0, 3)}
                   </div>
                   <div>
                     <h2 className="text-xl font-bold text-white font-mono flex items-center gap-2">
                       <span>{selectedInlineTicker}</span>
                       {monitoredData[selectedInlineTicker]?.recommendation && (
-                        <span className="text-xs px-2.5 py-0.5 rounded-full font-mono font-bold bg-brand/15 text-brand border border-brand/30">
+                        <span className="text-xs px-2.5 py-0.5 rounded-full font-mono font-bold bg-brand/15 text-brandText border border-brand/30">
                           {monitoredData[selectedInlineTicker].recommendation}
                         </span>
                       )}

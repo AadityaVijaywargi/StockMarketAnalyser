@@ -24,7 +24,7 @@ export const PatternsPanel: React.FC<PatternsPanelProps> = ({ patterns }) => {
     <div className="bg-surface border border-borderDark p-6 rounded-xl flex flex-col gap-5 h-full">
       <div className="flex items-center gap-3 border-b border-borderDark pb-4">
         <div className="w-8 h-8 rounded bg-brand/10 border border-brand/20 flex items-center justify-center">
-          <Sparkles className="w-4 h-4 text-brand" />
+          <Sparkles className="w-4 h-4 text-brandText" />
         </div>
         <h3 className="font-bold text-base text-white">Algorithmic Pattern Detections</h3>
       </div>
@@ -68,7 +68,7 @@ export const PatternsPanel: React.FC<PatternsPanelProps> = ({ patterns }) => {
                 </div>
                 {p.key_price_levels.length > 0 && (
                   <div className="flex items-center gap-1.5">
-                    <Zap className="w-3.5 h-3.5 opacity-60 text-brand" />
+                    <Zap className="w-3.5 h-3.5 opacity-60 text-brandText" />
                     <span>Neckline: {formatPrice(p.key_price_levels[p.key_price_levels.length - 1])}</span>
                   </div>
                 )}

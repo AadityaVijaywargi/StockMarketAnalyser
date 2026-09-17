@@ -810,9 +810,9 @@ export const TechnicalChart: React.FC<TechnicalChartProps> = ({
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-borderDark/60 pb-3.5">
         <div>
           <h3 className="font-bold text-base text-white font-mono flex items-center gap-2">
-            <Activity className="w-5 h-5 text-brand" />
+            <Activity className="w-5 h-5 text-brandText" />
             <span>Modular Technical Workspace</span>
-            <span className="text-xs text-brand bg-brand/10 border border-brand/20 px-2 py-0.5 rounded font-mono font-bold">
+            <span className="text-xs text-brandText bg-brand/10 border border-brand/20 px-2 py-0.5 rounded font-mono font-bold">
               {activeTimeframe}
             </span>
           </h3>
@@ -843,7 +843,7 @@ export const TechnicalChart: React.FC<TechnicalChartProps> = ({
           {/* Indicators Modal Trigger Button */}
           <button
             onClick={() => setShowIndicatorModal(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand/15 border border-brand/40 text-brand hover:bg-brand/25 text-xs font-mono font-bold transition-all shadow-sm"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand/15 border border-brand/40 text-brandText hover:bg-brand/25 text-xs font-mono font-bold transition-all shadow-sm"
           >
             <SlidersHorizontal className="w-3.5 h-3.5" />
             <span>Indicators ({Object.values(indicators).filter(Boolean).length})</span>
@@ -890,7 +890,7 @@ export const TechnicalChart: React.FC<TechnicalChartProps> = ({
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-background border border-borderDark/60 text-slate-300 hover:text-white text-xs font-mono font-semibold transition-all"
             title="Download PNG Chart Snapshot"
           >
-            <Camera className="w-3.5 h-3.5 text-brand" />
+            <Camera className="w-3.5 h-3.5 text-brandText" />
             <span className="hidden sm:inline">Export</span>
           </button>
 
@@ -898,7 +898,7 @@ export const TechnicalChart: React.FC<TechnicalChartProps> = ({
           {!isOnDedicatedChartPage && (
             <Link
               to={`/chart/${ticker}?timeframe=${activeTimeframe}`}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand/15 border border-brand/40 text-brand hover:bg-brand/25 text-xs font-mono font-bold transition-all shadow-sm"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand/15 border border-brand/40 text-brandText hover:bg-brand/25 text-xs font-mono font-bold transition-all shadow-sm"
               title="Open this chart in a dedicated full-height workspace"
             >
               <Maximize2 className="w-3.5 h-3.5" />
@@ -1023,7 +1023,7 @@ export const TechnicalChart: React.FC<TechnicalChartProps> = ({
             <span>O: <span className="text-slate-300 font-normal">₹{hoverMetrics.open}</span></span>
             <span>H: <span className="text-emerald-400 font-normal">₹{hoverMetrics.high}</span></span>
             <span>L: <span className="text-rose-400 font-normal">₹{hoverMetrics.low}</span></span>
-            <span>C: <span className="text-brand font-bold">₹{hoverMetrics.close}</span></span>
+            <span>C: <span className="text-brandText font-bold">₹{hoverMetrics.close}</span></span>
             {hoverMetrics.changePct !== undefined && (
               <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${
                 hoverMetrics.changePct >= 0
@@ -1043,7 +1043,7 @@ export const TechnicalChart: React.FC<TechnicalChartProps> = ({
       {/* Loading Overlay */}
       {isLoading && (
         <div className="p-12 text-center text-textMuted flex items-center justify-center gap-3 bg-background/50 rounded-xl">
-          <Loader2 className="w-6 h-6 animate-spin text-brand" />
+          <Loader2 className="w-6 h-6 animate-spin text-brandText" />
           <span className="font-mono text-xs font-bold text-white">Loading {activeTimeframe} Technical Series for {ticker}...</span>
         </div>
       )}
@@ -1077,7 +1077,7 @@ export const TechnicalChart: React.FC<TechnicalChartProps> = ({
           <div className="bg-surface border border-borderDark p-6 rounded-2xl max-w-md w-full flex flex-col gap-4 shadow-2xl font-mono text-xs">
             <div className="flex items-center justify-between border-b border-borderDark pb-3">
               <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <SlidersHorizontal className="w-4 h-4 text-brand" />
+                <SlidersHorizontal className="w-4 h-4 text-brandText" />
                 <span>Technical Indicators & Overlay Settings</span>
               </h3>
               <button onClick={() => setShowIndicatorModal(false)} className="text-textMuted hover:text-white">✕</button>
@@ -1213,7 +1213,7 @@ export const TechnicalChart: React.FC<TechnicalChartProps> = ({
 
                 <div className="bg-background p-2.5 rounded-lg border border-borderDark/60 flex items-center justify-between">
                   <span className="text-textMuted">Exchange Timezone:</span>
-                  <span className="text-brand font-bold">{diagnosticsData.exchange_timezone}</span>
+                  <span className="text-brandText font-bold">{diagnosticsData.exchange_timezone}</span>
                 </div>
 
                 <div className="bg-background p-2.5 rounded-lg border border-borderDark/60 flex items-center justify-between">
@@ -1253,7 +1253,7 @@ export const TechnicalChart: React.FC<TechnicalChartProps> = ({
               </div>
             ) : (
               <div className="py-8 text-center text-textMuted flex items-center justify-center gap-2">
-                <Loader2 className="w-5 h-5 animate-spin text-brand" />
+                <Loader2 className="w-5 h-5 animate-spin text-brandText" />
                 <span>Running Exchange Diagnostics...</span>
               </div>
             )}

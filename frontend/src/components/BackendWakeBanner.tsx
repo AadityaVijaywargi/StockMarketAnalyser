@@ -39,7 +39,7 @@ export const BackendWakeBanner: React.FC = () => {
     >
       {state === 'waking' ? (
         <>
-          <Loader2 className="w-4 h-4 mt-0.5 animate-spin text-brand shrink-0" />
+          <Loader2 className="w-4 h-4 mt-0.5 animate-spin text-brandText shrink-0" />
           <div className="flex flex-col gap-0.5">
             <span className="text-white font-bold">Server is waking up…</span>
             <span className="text-textMuted">It sleeps when idle and can take up to a minute to start. The page will work as soon as it's ready.</span>
@@ -53,7 +53,7 @@ export const BackendWakeBanner: React.FC = () => {
             <span className="text-textMuted">Check your connection, or try again in a moment.</span>
             <button
               onClick={check}
-              className="self-start px-3 py-1 rounded-lg bg-brand/15 border border-brand/40 text-brand font-bold hover:bg-brand/25 transition-all"
+              className="self-start px-3 py-1 rounded-lg bg-brand/15 border border-brand/40 text-brandText font-bold hover:bg-brand/25 transition-all"
             >
               Retry
             </button>

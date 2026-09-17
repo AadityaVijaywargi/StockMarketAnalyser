@@ -38,7 +38,7 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({ onSearch, isLoading }) => 
           title="Notification Center"
           className={`relative w-9 h-9 rounded-lg border transition-all focus:outline-none cursor-pointer ${
             isOpen
-              ? 'bg-brand/20 border-brand/40 text-brand'
+              ? 'bg-brand/20 border-brand/40 text-brandText'
               : 'hover:bg-white/[0.05] border-transparent hover:border-borderDark text-textMuted hover:text-white'
           }`}
         >
@@ -63,11 +63,11 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({ onSearch, isLoading }) => 
           title="Account settings"
           className="flex items-center gap-2.5 pl-1 cursor-pointer group"
         >
-          <div className="w-7 h-7 rounded-full bg-brand/10 border border-brand/20 flex items-center justify-center text-brand font-mono font-bold text-xs">
+          <div className="w-7 h-7 rounded-full bg-brand/10 border border-brand/20 flex items-center justify-center text-brandText font-mono font-bold text-xs">
             {initials}
           </div>
           <div className="hidden sm:flex flex-col text-left">
-            <span className="text-[11px] font-bold text-white leading-none group-hover:text-brand transition-colors">{displayName}</span>
+            <span className="text-[11px] font-bold text-white leading-none group-hover:text-brandText transition-colors">{displayName}</span>
             <span className="text-[9px] text-textMuted leading-none mt-1">{isAdmin ? 'Admin' : 'Member'}</span>
           </div>
         </button>

@@ -157,6 +157,9 @@ GOOD = {
     "ADMIN_PASSWORD_HASH": hash_password("pw"),
     "DATABASE_URL": "postgresql://example/db",
     "ENV": "production",
+    # A production deploy that leaves this unset falls back to localhost CORS
+    # origins, which blocks every API call from the real frontend.
+    "ALLOWED_ORIGINS": "https://example.com",
 }
 
 

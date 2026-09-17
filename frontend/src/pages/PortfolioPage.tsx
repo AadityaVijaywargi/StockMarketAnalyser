@@ -145,15 +145,15 @@ export const PortfolioPage: React.FC = () => {
   }, [equityCurve.length, equityCurve[equityCurve.length - 1]?.value]);
 
   return (
-    <div className="min-h-screen bg-background text-text font-sans p-6 md:p-8 flex flex-col gap-6 max-w-7xl mx-auto">
+    <div className="w-full min-h-screen bg-background text-text font-sans p-6 md:p-8 flex flex-col gap-6 max-w-7xl mx-auto">
       
       {/* Workspace Header & Action Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-borderDark/80 pb-5">
         <div>
           <h1 className="font-extrabold text-2xl text-white tracking-tight flex items-center gap-2.5 font-mono">
-            <Briefcase className="w-6 h-6 text-brand" />
+            <Briefcase className="w-6 h-6 text-brandText" />
             <span>Trade Management & Portfolio</span>
-            <span className="text-xs bg-brand/15 border border-brand/30 text-brand px-2.5 py-0.5 rounded-full font-bold">
+            <span className="text-xs bg-brand/15 border border-brand/30 text-brandText px-2.5 py-0.5 rounded-full font-bold">
               PHASE 30 LIVE
             </span>
           </h1>
@@ -164,7 +164,7 @@ export const PortfolioPage: React.FC = () => {
         <div className="flex items-center gap-3">
           <button
             onClick={handleExportCSV}
-            className="flex items-center gap-2 px-4 py-2 bg-brand/15 border border-brand/40 text-brand rounded-xl text-xs font-mono font-bold hover:bg-brand/25 transition-all shadow-md"
+            className="flex items-center gap-2 px-4 py-2 bg-brand/15 border border-brand/40 text-brandText rounded-xl text-xs font-mono font-bold hover:bg-brand/25 transition-all shadow-md"
           >
             <Download className="w-4 h-4" />
             <span>Export to CSV</span>
@@ -210,7 +210,7 @@ export const PortfolioPage: React.FC = () => {
         {/* Card 4: Portfolio Risk/Reward */}
         <div className="bg-surface border border-borderDark p-4 rounded-2xl flex flex-col gap-1.5 shadow-lg">
           <span className="text-xs text-textMuted font-mono font-semibold">Portfolio Risk / Reward</span>
-          <div className="font-mono text-xl font-extrabold text-brand">
+          <div className="font-mono text-xl font-extrabold text-brandText">
             1 : {summary.risk_reward_ratio}
           </div>
           <span className="text-[11px] text-textMuted font-mono">Average R:R Ratio</span>
@@ -233,7 +233,7 @@ export const PortfolioPage: React.FC = () => {
         <div className="bg-surface border border-borderDark p-5 rounded-2xl shadow-xl">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-bold text-sm text-white font-mono flex items-center gap-2">
-              <Activity className="w-4 h-4 text-brand" />
+              <Activity className="w-4 h-4 text-brandText" />
               <span>Cumulative Realized P/L ({sortedClosed.length} closed trades)</span>
             </h3>
             <span className={`text-xs font-mono font-bold ${equityCurve[equityCurve.length - 1].value >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
@@ -305,7 +305,7 @@ export const PortfolioPage: React.FC = () => {
                   {/* Top Bar */}
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-borderDark/60 pb-3">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-brand/15 border border-brand/30 flex items-center justify-center font-mono font-bold text-brand">
+                      <div className="w-10 h-10 rounded-xl bg-brand/15 border border-brand/30 flex items-center justify-center font-mono font-bold text-brandText">
                         {trade.ticker.slice(0, 2)}
                       </div>
                       <div>
@@ -348,7 +348,7 @@ export const PortfolioPage: React.FC = () => {
 
                     <div>
                       <span className="text-textMuted text-[10px]">Current Price:</span>
-                      <div className="text-brand font-bold">₹{trade.current_price}</div>
+                      <div className="text-brandText font-bold">₹{trade.current_price}</div>
                     </div>
 
                     <div>

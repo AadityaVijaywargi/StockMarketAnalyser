@@ -95,6 +95,16 @@ def _init_schema(pool) -> None:
                 )
             """)
             cur.execute("""
+                CREATE TABLE IF NOT EXISTS access_requests (
+                    id TEXT PRIMARY KEY,
+                    email TEXT NOT NULL,
+                    message TEXT,
+                    created_at TEXT NOT NULL,
+                    source_ip TEXT,
+                    status TEXT NOT NULL DEFAULT 'pending'
+                )
+            """)
+            cur.execute("""
                 CREATE TABLE IF NOT EXISTS user_data (
                     username TEXT NOT NULL,
                     key TEXT NOT NULL,
@@ -104,6 +114,6 @@ def _init_schema(pool) -> None:
                 )
             """)
         conn.commit()
-        logger.info("Postgres schema ensured (users, invites, user_data)")
+        logger.info("Postgres schema ensured (users, invites, access_requests, user_data)")
     finally:
         pool.putconn(conn)

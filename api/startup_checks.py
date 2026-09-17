@@ -48,6 +48,12 @@ def check_config(settings: Settings) -> List[str]:
     elif len(hash_parts) != 2 or not all(_is_hex(part) for part in hash_parts):
         warnings.append("ADMIN_PASSWORD_HASH is not in 'salt$hash' hex format; the admin account cannot log in.")
 
+    if is_production(settings) and not settings.ALLOWED_ORIGINS:
+        warnings.append(
+            "ALLOWED_ORIGINS is not set in production: CORS falls back to localhost dev origins, "
+            "so the deployed frontend's API calls will be blocked by the browser."
+        )
+
     if is_production(settings) and not settings.DATABASE_URL:
         warnings.append(
             "DATABASE_URL is not set in production: user accounts, invites and synced data are stored "

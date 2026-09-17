@@ -130,13 +130,13 @@ export const BacktestingPage: React.FC = () => {
   const metrics = result?.metrics;
 
   return (
-    <div className="min-h-screen bg-background text-text font-sans p-6 md:p-8 flex flex-col gap-6 max-w-7xl mx-auto">
+    <div className="w-full min-h-screen bg-background text-text font-sans p-6 md:p-8 flex flex-col gap-6 max-w-7xl mx-auto">
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-borderDark/80 pb-5">
         <div>
           <h1 className="font-extrabold text-2xl text-white tracking-tight flex items-center gap-2.5 font-mono">
-            <BarChart2 className="w-6 h-6 text-brand" />
+            <BarChart2 className="w-6 h-6 text-brandText" />
             <span>Strategy Backtesting</span>
           </h1>
           <p className="text-xs text-textMuted mt-1">
@@ -223,7 +223,7 @@ export const BacktestingPage: React.FC = () => {
 
       {isLoading && !result && (
         <div className="bg-surface border border-borderDark/80 p-16 rounded-2xl text-center text-textMuted flex flex-col items-center gap-3">
-          <Loader2 className="w-7 h-7 animate-spin text-brand" />
+          <Loader2 className="w-7 h-7 animate-spin text-brandText" />
           <span className="font-mono text-xs font-bold">Replaying historical bars and simulating trades...</span>
         </div>
       )}
@@ -262,7 +262,7 @@ export const BacktestingPage: React.FC = () => {
 
             <div className="bg-surface border border-borderDark p-4 rounded-2xl flex flex-col gap-1.5 shadow-lg">
               <div className="flex items-center gap-1.5 text-textMuted text-[11px] font-mono font-bold">
-                <Activity className="w-3.5 h-3.5 text-brand" />
+                <Activity className="w-3.5 h-3.5 text-brandText" />
                 <span>CAGR</span>
               </div>
               <span className="text-xl font-extrabold font-mono text-white">{metrics.cagr_pct}%</span>
@@ -310,7 +310,7 @@ export const BacktestingPage: React.FC = () => {
           <div className="bg-surface border border-borderDark p-5 rounded-2xl shadow-xl">
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-bold text-sm text-white font-mono flex items-center gap-2">
-                <Activity className="w-4 h-4 text-brand" />
+                <Activity className="w-4 h-4 text-brandText" />
                 <span>Equity Curve — {result.ticker} ({result.period.toUpperCase()}, {result.bars_simulated} bars)</span>
               </h3>
               <span className="text-xs font-mono text-textMuted">
@@ -338,7 +338,7 @@ export const BacktestingPage: React.FC = () => {
               {result.trades.length > 0 && (
                 <button
                   onClick={handleExportCSV}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-brand/15 border border-brand/40 text-brand rounded-lg text-[11px] font-mono font-bold hover:bg-brand/25 transition-all"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-brand/15 border border-brand/40 text-brandText rounded-lg text-[11px] font-mono font-bold hover:bg-brand/25 transition-all"
                 >
                   <Download className="w-3.5 h-3.5" />
                   <span>Export CSV</span>
@@ -378,7 +378,7 @@ export const BacktestingPage: React.FC = () => {
               </div>
             )}
             {result.open_position && (
-              <div className="p-3 border-t border-borderDark/60 bg-brand/5 text-xs font-mono text-brand flex items-center gap-2">
+              <div className="p-3 border-t border-borderDark/60 bg-brand/5 text-xs font-mono text-brandText flex items-center gap-2">
                 <Activity className="w-3.5 h-3.5" />
                 <span>
                   Open position entered {result.open_position.entry_date} at ₹{result.open_position.entry_price} —

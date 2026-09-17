@@ -52,7 +52,7 @@ export const TradePerformanceDashboard: React.FC = () => {
       {/* Header Tabs & Actions */}
       <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800/80 mb-4">
         <div className="flex items-center gap-2.5">
-          <div className="p-2 rounded-lg bg-brand/10 text-brand border border-brand/20">
+          <div className="p-2 rounded-lg bg-brand/10 text-brandText border border-brand/20">
             <Trophy className="w-5 h-5" />
           </div>
           <div>
@@ -148,7 +148,7 @@ export const TradePerformanceDashboard: React.FC = () => {
           {/* Avg Holding Duration */}
           <div className="bg-slate-950/60 border border-slate-800/80 p-3 rounded-lg">
             <span className="text-[10px] text-slate-400 block font-medium">Avg Holding Time</span>
-            <span className="text-sm font-bold text-brand">{hasHistory ? summary.average_holding_time : '--'}</span>
+            <span className="text-sm font-bold text-brandText">{hasHistory ? summary.average_holding_time : '--'}</span>
             <span className="text-[10px] text-slate-400 block mt-0.5">Time in Market</span>
           </div>
         </div>
@@ -188,7 +188,7 @@ export const TradePerformanceDashboard: React.FC = () => {
                     return (
                       <tr key={t.id} className="hover:bg-slate-950/40 transition-all group">
                         <td className="py-2.5 pl-2 font-bold text-slate-200">
-                          <span className="px-2 py-0.5 rounded bg-brand/10 text-brand font-mono text-[11px]">
+                          <span className="px-2 py-0.5 rounded bg-brand/10 text-brandText font-mono text-[11px]">
                             {t.ticker}
                           </span>
                         </td>

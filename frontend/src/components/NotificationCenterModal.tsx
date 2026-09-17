@@ -69,7 +69,7 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
       );
     }
     return (
-      <span className="text-[9px] font-mono font-bold uppercase tracking-wider bg-brand/15 text-brand border border-brand/30 px-2 py-0.5 rounded-full flex items-center gap-1">
+      <span className="text-[9px] font-mono font-bold uppercase tracking-wider bg-brand/15 text-brandText border border-brand/30 px-2 py-0.5 rounded-full flex items-center gap-1">
         <Info className="w-3 h-3" /> INFO
       </span>
     );
@@ -164,7 +164,7 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
                 )}
 
                 {/* Tap to open analysis prompt */}
-                <div className="flex items-center justify-end text-[10px] font-mono text-brand font-semibold group-hover:translate-x-1 transition-transform">
+                <div className="flex items-center justify-end text-[10px] font-mono text-brandText font-semibold group-hover:translate-x-1 transition-transform">
                   <span>Tap to open analysis</span>
                   <ArrowRight className="w-3 h-3 ml-1" />
                 </div>
@@ -188,7 +188,7 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
         {/* Modal Top Header */}
         <div className="p-5 border-b border-borderDark flex items-center justify-between bg-background/50">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-brand/10 border border-brand/20 flex items-center justify-center text-brand">
+            <div className="w-9 h-9 rounded-xl bg-brand/10 border border-brand/20 flex items-center justify-center text-brandText">
               <Bell className="w-5 h-5" />
             </div>
             <div>
@@ -217,7 +217,7 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
           <div className="px-5 py-2.5 bg-background/30 border-b border-borderDark/40 flex items-center justify-between text-xs font-mono">
             <button
               onClick={markAllAsRead}
-              className="flex items-center gap-1.5 text-brand hover:text-brand/80 transition-colors font-semibold"
+              className="flex items-center gap-1.5 text-brandText hover:text-brand/80 transition-colors font-semibold"
             >
               <CheckCheck className="w-4 h-4" />
               <span>Mark all as read</span>
@@ -237,7 +237,7 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
         <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-6">
           {notifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center text-center gap-3 my-auto py-12">
-              <div className="w-14 h-14 rounded-2xl bg-brand/10 border border-brand/20 flex items-center justify-center text-brand animate-pulse">
+              <div className="w-14 h-14 rounded-2xl bg-brand/10 border border-brand/20 flex items-center justify-center text-brandText animate-pulse">
                 <Bell className="w-7 h-7" />
               </div>
               <div className="flex flex-col gap-1 max-w-xs">

@@ -200,7 +200,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
       {/* 1. Ticker and Price info */}
       <div className="flex flex-col gap-2.5">
         <div className="flex flex-wrap items-center gap-3">
-          <span className="text-[11px] font-mono tracking-widest bg-brand/10 text-brand border border-brand/20 px-2 py-0.5 rounded">
+          <span className="text-[11px] font-mono tracking-widest bg-brand/10 text-brandText border border-brand/20 px-2 py-0.5 rounded">
             {report.ticker}
           </span>
           <h2 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">

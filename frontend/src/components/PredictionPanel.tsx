@@ -25,7 +25,7 @@ export const PredictionPanel: React.FC<PredictionPanelProps> = ({ prediction, ho
   <div className="bg-surface border border-borderDark p-6 rounded-2xl flex flex-col gap-5">
     <div className="flex flex-wrap items-center justify-between gap-4 border-b border-borderDark pb-4">
       <div className="flex items-center gap-2.5">
-        <div className="w-8 h-8 rounded-lg bg-brand/10 border border-brand/20 flex items-center justify-center text-brand">
+        <div className="w-8 h-8 rounded-lg bg-brand/10 border border-brand/20 flex items-center justify-center text-brandText">
           <Sparkles className="w-4 h-4" />
         </div>
         <div>
@@ -81,7 +81,7 @@ export const PredictionPanel: React.FC<PredictionPanelProps> = ({ prediction, ho
             </div>
             <div className="text-right font-mono">
               <span className="text-[10px] text-textMuted uppercase block">Confidence</span>
-              <span className="text-base font-bold text-brand">{prediction.confidence}%</span>
+              <span className="text-base font-bold text-brandText">{prediction.confidence}%</span>
             </div>
           </div>
         </div>
@@ -149,7 +149,7 @@ export const PredictionPanel: React.FC<PredictionPanelProps> = ({ prediction, ho
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs font-sans text-slate-300">
               {prediction.reasons.map((reason, idx) => (
                 <div key={idx} className="flex items-center gap-2">
-                  <span className="text-brand font-mono font-bold">•</span>
+                  <span className="text-brandText font-mono font-bold">•</span>
                   <span>{reason}</span>
                 </div>
               ))}

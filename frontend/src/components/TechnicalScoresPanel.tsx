@@ -9,7 +9,7 @@ interface TechnicalScoresPanelProps {
 
 export const TechnicalScoresPanel: React.FC<TechnicalScoresPanelProps> = ({ scores }) => {
   const cards = [
-    { name: 'Trend Structure', score: scores.trend, icon: TrendingUp, color: 'text-brand' },
+    { name: 'Trend Structure', score: scores.trend, icon: TrendingUp, color: 'text-brandText' },
     { name: 'Momentum', score: scores.momentum, icon: Compass, color: 'text-blue-500' },
     { name: 'Volume Flow', score: scores.volume, icon: BarChart3, color: 'text-purple-500' },
     { name: 'Candle & Chart Patterns', score: scores.pattern, icon: Sparkles, color: 'text-yellow-500' },
@@ -27,7 +27,7 @@ export const TechnicalScoresPanel: React.FC<TechnicalScoresPanelProps> = ({ scor
         
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-xl bg-brand/10 border border-brand/20 flex items-center justify-center">
-            <Activity className="w-6 h-6 text-brand" />
+            <Activity className="w-6 h-6 text-brandText" />
           </div>
           <div>
             <h3 className="font-bold text-lg text-white">Overall Technical Score</h3>

@@ -188,7 +188,7 @@ export const TradeSignalPanel: React.FC<TradeSignalPanelProps> = ({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
           <div className="bg-slate-900 border border-slate-700 rounded-xl p-5 max-w-md w-full shadow-2xl animate-in fade-in zoom-in-95 duration-200">
             <h3 className="text-sm font-bold text-slate-100 uppercase tracking-wider mb-1 flex items-center gap-2">
-              <Play className="w-4 h-4 text-brand fill-brand" />
+              <Play className="w-4 h-4 text-brandText fill-brand" />
               Configure Sell Tracker Position
             </h3>
             <p className="text-xs text-slate-400 mb-4 leading-relaxed">
@@ -320,7 +320,7 @@ export const TradeSignalPanel: React.FC<TradeSignalPanelProps> = ({
 
           {/* Sell Tracker Button */}
           {isSellTracked ? (
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand/15 border border-brand/40 text-brand text-xs font-semibold">
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand/15 border border-brand/40 text-brandText text-xs font-semibold">
               <CheckCircle2 className="w-4 h-4" />
               <span>Sell Tracked</span>
             </div>
@@ -458,7 +458,7 @@ export const TradeSignalPanel: React.FC<TradeSignalPanelProps> = ({
 
             <div className="bg-slate-950/40 border border-slate-800/60 rounded-lg p-3">
               <span className="text-xs text-slate-400 block mb-1">Risk / Reward Ratio</span>
-              <div className="text-base font-bold text-brand">
+              <div className="text-base font-bold text-brandText">
                 1 : {signal?.risk_reward_ratio || '1.0'}
               </div>
               <span className="text-[10px] text-slate-400 block mt-0.5">
@@ -474,7 +474,7 @@ export const TradeSignalPanel: React.FC<TradeSignalPanelProps> = ({
               <div className="text-sm font-bold text-slate-200 truncate">
                 {signal?.holding_time || '30–90 minutes'}
               </div>
-              <span className="text-[10px] font-medium text-brand block mt-0.5">
+              <span className="text-[10px] font-medium text-brandText block mt-0.5">
                 {activeTimeframe} Horizon
               </span>
             </div>

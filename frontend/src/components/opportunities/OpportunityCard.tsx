@@ -51,7 +51,7 @@ export const OpportunityCard: React.FC<OpportunityCardProps> = ({ card, onClick 
       <div className="flex items-start justify-between gap-3 z-10">
         <div className="flex flex-col gap-0.5">
           <div className="flex items-center gap-2">
-            <span className="text-base font-bold text-white font-mono tracking-wide group-hover:text-brand transition-colors">
+            <span className="text-base font-bold text-white font-mono tracking-wide group-hover:text-brandText transition-colors">
               {(card.ticker || 'STOCK').replace('.NS', '')}
             </span>
             <button
@@ -137,7 +137,7 @@ export const OpportunityCard: React.FC<OpportunityCardProps> = ({ card, onClick 
       )}
 
       {/* Action Footer Button */}
-      <div className="pt-2 flex items-center justify-end text-xs font-mono text-brand font-semibold group-hover:translate-x-1 transition-transform">
+      <div className="pt-2 flex items-center justify-end text-xs font-mono text-brandText font-semibold group-hover:translate-x-1 transition-transform">
         <span>View Quantitative Analysis</span>
         <ArrowUpRight className="w-4 h-4 ml-1" />
       </div>

@@ -83,10 +83,10 @@ export const TopOpportunitiesSection: React.FC<TopOpportunitiesSectionProps> = (
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-borderDark/50 pb-6">
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center gap-2">
-            <span className="p-2 rounded-xl bg-brand/10 text-brand border border-brand/20">
+            <span className="p-2 rounded-xl bg-brand/10 text-brandText border border-brand/20">
               <Sparkles className="w-5 h-5" />
             </span>
-            <span className="text-xs font-mono font-bold uppercase tracking-widest text-brand">
+            <span className="text-xs font-mono font-bold uppercase tracking-widest text-brandText">
               Quantitative Scanner Feed
             </span>
           </div>
@@ -105,7 +105,7 @@ export const TopOpportunitiesSection: React.FC<TopOpportunitiesSectionProps> = (
           disabled={isLoading || isRefreshing}
           className="flex items-center gap-2 px-4 py-2 rounded-xl bg-surface border border-borderDark/80 hover:border-brand/40 text-xs font-mono text-textMuted hover:text-white transition-all shadow-premium disabled:opacity-50 self-start md:self-auto"
         >
-          <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-brand' : ''}`} />
+          <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-brandText' : ''}`} />
           <span>{isRefreshing ? 'Rescanning Market...' : 'Refresh Feed'}</span>
         </button>
       </div>
@@ -116,7 +116,7 @@ export const TopOpportunitiesSection: React.FC<TopOpportunitiesSectionProps> = (
         {/* Recommendation Filter Pills */}
         <div className="flex items-center gap-1.5 flex-wrap">
           <span className="text-xs font-mono text-textMuted mr-2 flex items-center gap-1">
-            <Filter className="w-3.5 h-3.5 text-brand" /> Filter Signal:
+            <Filter className="w-3.5 h-3.5 text-brandText" /> Filter Signal:
           </span>
 
           {['ALL', 'BUY', 'WATCH', 'AVOID'].map(rec => (
@@ -125,7 +125,7 @@ export const TopOpportunitiesSection: React.FC<TopOpportunitiesSectionProps> = (
               onClick={() => setSelectedRec(rec)}
               className={`px-3 py-1.5 rounded-xl text-xs font-mono font-semibold transition-all ${
                 selectedRec === rec
-                  ? 'bg-brand text-black font-bold shadow-md'
+                  ? 'bg-brand text-white font-bold shadow-md'
                   : 'bg-white/[0.02] text-textMuted hover:text-white border border-borderDark/40 hover:border-borderDark'
               }`}
             >
@@ -175,7 +175,7 @@ export const TopOpportunitiesSection: React.FC<TopOpportunitiesSectionProps> = (
            distinct from "genuinely found nothing" below, since that would
            otherwise look like a real (if unlikely) result. */
         <div className="p-12 rounded-2xl bg-surface/50 border border-borderDark/60 text-center flex flex-col items-center justify-center gap-3">
-          <RefreshCw className="w-10 h-10 text-brand animate-spin" />
+          <RefreshCw className="w-10 h-10 text-brandText animate-spin" />
           <h4 className="text-base font-bold text-white">Scanning the market...</h4>
           <p className="text-xs text-textMuted max-w-md">
             First scan of the session - this refreshes automatically in a few seconds.
@@ -191,7 +191,7 @@ export const TopOpportunitiesSection: React.FC<TopOpportunitiesSectionProps> = (
           </p>
           <button
             onClick={() => { setSelectedRec('ALL'); setSelectedSector('ALL'); }}
-            className="mt-2 px-4 py-2 rounded-xl bg-brand/10 border border-brand/30 text-xs font-mono text-brand font-bold hover:bg-brand hover:text-black transition-all"
+            className="mt-2 px-4 py-2 rounded-xl bg-brand/10 border border-brand/30 text-xs font-mono text-brandText font-bold hover:bg-brand hover:text-white transition-all"
           >
             Reset Filters
           </button>

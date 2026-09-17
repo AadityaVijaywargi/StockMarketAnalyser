@@ -1,5 +1,5 @@
 import os
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from config.weights import DEFAULT_SCORE_WEIGHTS, DEFAULT_BUY_THRESHOLD, DEFAULT_WATCH_THRESHOLD, INDICATOR_SETTINGS, PREDICTION_HORIZON_WEIGHTS, EVENT_OVERRIDE_IMPORTANCE_THRESHOLD
@@ -65,6 +65,38 @@ class Settings(BaseSettings):
     # API Server Settings
     API_HOST: str = Field(default="127.0.0.1")
     API_PORT: int = Field(default=8000)
+
+    # Public site / CORS
+    # Comma-separated list of browser origins allowed to call this API.
+    # Wildcard CORS plus allow_credentials lets any site on the internet make
+    # authenticated requests with a victim's session, so production must name
+    # its origins explicitly. Left empty in development, which falls back to
+    # the local Vite dev server origins.
+    ALLOWED_ORIGINS: str = Field(
+        default="",
+        description="Comma-separated allowed browser origins, e.g. https://example.com,https://www.example.com",
+    )
+    # Canonical public base URL, used to build sitemap.xml and canonical tags.
+    SITE_URL: str = Field(
+        default="https://stock-market-analyser-vert.vercel.app",
+        description="Canonical public base URL of the frontend (no trailing slash)",
+    )
+
+    @property
+    def allowed_origin_list(self) -> List[str]:
+        """Parsed ALLOWED_ORIGINS (empty when unset)."""
+        return [o.strip().rstrip("/") for o in self.ALLOWED_ORIGINS.split(",") if o.strip()]
+
+    @property
+    def allowed_origin_regex(self) -> Optional[str]:
+        """
+        Dev-only fallback when ALLOWED_ORIGINS is unset: any localhost port,
+        since the Vite dev and preview servers run on several. startup_checks
+        warns when a production deploy relies on this.
+        """
+        if self.allowed_origin_list:
+            return None
+        return r"^http://(localhost|127\.0\.0\.1)(:\d+)?$"
 
     # Authentication Settings
     JWT_SECRET_KEY: str = Field(default="", description="Secret key used to sign login session tokens")

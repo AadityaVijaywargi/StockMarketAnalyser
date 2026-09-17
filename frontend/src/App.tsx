@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { useAuth } from './context/AuthContext';
 import { NotificationCenterSidebar } from './components/NotificationCenterSidebar';
 import { apiService } from './services/api';
 import { DeterministicAnalysisReport } from './types';
@@ -26,9 +27,31 @@ const ComparePage = lazy(() => import('./pages/ComparePage').then(m => ({ defaul
 const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })));
 const SignupPage = lazy(() => import('./pages/SignupPage').then(m => ({ default: m.SignupPage })));
 
+// Public, logged-out pages. Split out for the same reason as the app pages,
+// and with more at stake: a first-time visitor landing on "/" should not
+// download the charting or analysis bundles to read a marketing page.
+const MarketingPage = lazy(() => import('./pages/public/MarketingPage').then(m => ({ default: m.MarketingPage })));
+const RequestAccessPage = lazy(() => import('./pages/public/RequestAccessPage').then(m => ({ default: m.RequestAccessPage })));
+const PrivacyPolicyPage = lazy(() => import('./pages/public/PrivacyPolicyPage').then(m => ({ default: m.PrivacyPolicyPage })));
+const TermsPage = lazy(() => import('./pages/public/TermsPage').then(m => ({ default: m.TermsPage })));
+const CookiePolicyPage = lazy(() => import('./pages/public/CookiePolicyPage').then(m => ({ default: m.CookiePolicyPage })));
+const NotFoundPage = lazy(() => import('./pages/public/NotFoundPage').then(m => ({ default: m.NotFoundPage })));
+
+// Path prefixes that belong to the authenticated app shell. Keep in sync
+// with the <Routes> inside the app shell below.
+const APP_ROUTE_PREFIXES = [
+  '/app', '/dashboard', '/watchlist', '/market', '/portfolio',
+  '/backtesting', '/settings', '/chart', '/compare',
+];
+
+const LandingRedirect: React.FC = () => {
+  const { isAuthenticated } = useAuth();
+  return isAuthenticated ? <Navigate to="/app" replace /> : <MarketingPage />;
+};
+
 const RouteLoadingFallback: React.FC = () => (
   <div className="flex-1 min-h-screen flex items-center justify-center bg-background">
-    <Loader2 className="w-6 h-6 animate-spin text-brand" />
+    <Loader2 className="w-6 h-6 animate-spin text-brandText" />
   </div>
 );
 
@@ -180,7 +203,7 @@ const DashboardRouteWrapper: React.FC<{
                 PIPELINE ANALYSIS: {loadingTicker}
               </span>
             </div>
-            <Loader2 className="w-4 h-4 animate-spin text-brand" />
+            <Loader2 className="w-4 h-4 animate-spin text-brandText" />
           </div>
 
           <div className="flex flex-col gap-3 font-mono text-xs">
@@ -203,7 +226,7 @@ const DashboardRouteWrapper: React.FC<{
                     {isCompleted ? (
                       <span className="text-sm font-black">✓</span>
                     ) : isActive ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin text-brand" />
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-brandText" />
                     ) : (
                       <div className="w-1.5 h-1.5 rounded-full bg-borderDark" />
                     )}
@@ -236,7 +259,13 @@ export const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
-  const isAuthRoute = location.pathname === '/login' || location.pathname === '/signup';
+  // Routes that render the authenticated app shell (sidebar + notification
+  // rail). Anything not matching one of these is a logged-out page - the
+  // marketing page, the legal pages, the auth screens, or a 404 - and renders
+  // without the app chrome.
+  const isAppRoute = APP_ROUTE_PREFIXES.some(
+    prefix => location.pathname === prefix || location.pathname.startsWith(`${prefix}/`),
+  );
 
   const stagesList = [
     "Downloading historical market data...",
@@ -253,15 +282,26 @@ export const App: React.FC = () => {
 
   const handleReset = () => {
     setError(null);
-    navigate('/');
+    navigate('/app');
   };
 
-  if (isAuthRoute) {
+  if (!isAppRoute) {
     return (
       <Suspense fallback={<RouteLoadingFallback />}>
         <Routes>
+          {/* "/" is the public marketing page. Signed-in visitors are sent
+              straight through to the app home rather than being shown a
+              pitch for a product they already have. */}
+          <Route path="/" element={<LandingRedirect />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
+          <Route path="/request-access" element={<RequestAccessPage />} />
+          <Route path="/privacy" element={<PrivacyPolicyPage />} />
+          <Route path="/terms" element={<TermsPage />} />
+          <Route path="/cookies" element={<CookiePolicyPage />} />
+          {/* Real 404. This replaced a catch-all redirect to "/", which
+              turned every mistyped URL into a soft 404 served with HTTP 200. */}
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Suspense>
     );
@@ -302,7 +342,7 @@ export const App: React.FC = () => {
         <Suspense fallback={<RouteLoadingFallback />}>
         <Routes>
           <Route
-            path="/"
+            path="/app"
             element={
               <ProtectedRoute>
                 <LandingPage
@@ -366,8 +406,6 @@ export const App: React.FC = () => {
             path="/compare"
             element={<ProtectedRoute><ComparePage /></ProtectedRoute>}
           />
-          {/* Catch-all fallback redirect */}
-          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         </Suspense>
       </div>

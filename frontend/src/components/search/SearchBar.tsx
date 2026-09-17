@@ -134,12 +134,12 @@ export const SearchBar: React.FC<SearchBarProps> = ({
 
         {/* Left Search Icon */}
         <div className={`absolute text-textMuted ${compact ? 'left-3' : 'left-4'}`}>
-          <Search className={compact ? 'w-4 h-4 text-brand' : 'w-5 h-5 text-brand'} />
+          <Search className={compact ? 'w-4 h-4 text-brandText' : 'w-5 h-5 text-brandText'} />
         </div>
 
         {/* Right Loading Spinner */}
         {(isLoading || isSearching) && (
-          <div className={`absolute text-brand ${compact ? 'right-3' : 'right-4'}`}>
+          <div className={`absolute text-brandText ${compact ? 'right-3' : 'right-4'}`}>
             <Loader2 className="w-3.5 h-3.5 animate-spin" />
           </div>
         )}
