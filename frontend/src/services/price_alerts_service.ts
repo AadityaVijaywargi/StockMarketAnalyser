@@ -48,8 +48,11 @@ export class PriceAlertsService {
     if (existing) return existing;
 
     const alert: PriceAlert = {
-      id: `alert_${ticker.toUpperCase()}_${Date.now()}`,
-      ticker: ticker.toUpperCase().trim(),
+      // Random suffix: alerts added in the same millisecond (e.g. an above
+      // and a below alert set together) must not share an id, or triggering
+      // or removing one silently does the same to the other.
+      id: `alert_${cleanTicker}_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`,
+      ticker: cleanTicker,
       company_name: companyName,
       target_price: targetPrice,
       direction,

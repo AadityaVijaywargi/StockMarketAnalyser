@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { Disclaimer, BACKTEST_DISCLAIMER } from '../components/Disclaimer';
 import { createChart, ColorType, IChartApi } from 'lightweight-charts';
 import {
   Play, TrendingUp, TrendingDown, Percent, Activity, ShieldAlert,
@@ -321,6 +322,13 @@ export const BacktestingPage: React.FC = () => {
               <span className="flex items-center gap-1.5"><span className="w-3 inline-block" style={{ borderTop: '2px dashed #64748b' }} /> Buy &amp; Hold</span>
             </div>
             <div ref={chartContainerRef} className="w-full rounded-xl overflow-hidden border border-borderDark/60" />
+            <div className="mt-3 flex flex-col gap-1.5">
+              <p className="text-[10px] font-mono text-textMuted">
+                Assumptions: {result.assumptions.execution}. Costs {result.assumptions.cost_pct_per_side}% + slippage {result.assumptions.slippage_pct_per_side}% per side
+                {' '}(total paid: <span className="text-slate-300">₹{(metrics.total_costs ?? 0).toLocaleString('en-IN')}</span>). Buy &amp; Hold pays the same entry costs.
+              </p>
+              <Disclaimer>{BACKTEST_DISCLAIMER}</Disclaimer>
+            </div>
           </div>
 
           {/* Trade Log */}

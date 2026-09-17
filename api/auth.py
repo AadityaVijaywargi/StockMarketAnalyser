@@ -22,7 +22,13 @@ def verify_password(password: str, salted_hash: str) -> bool:
     if not salted_hash or "$" not in salted_hash:
         return False
     salt, expected_hex = salted_hash.split("$", 1)
-    digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), bytes.fromhex(salt), PBKDF2_ITERATIONS)
+    try:
+        salt_bytes = bytes.fromhex(salt)
+    except ValueError:
+        # A malformed stored hash (e.g. a mis-pasted env var) must fail the
+        # login, not crash it with a 500.
+        return False
+    digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt_bytes, PBKDF2_ITERATIONS)
     return hmac.compare_digest(digest.hex(), expected_hex)
 
 

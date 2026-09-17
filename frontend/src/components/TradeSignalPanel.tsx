@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Disclaimer } from './Disclaimer';
 import { TradeSignal, PredictionResult } from '../types';
 import { apiService } from '../services/api';
 import { 
@@ -497,6 +498,8 @@ export const TradeSignalPanel: React.FC<TradeSignalPanelProps> = ({
           </ul>
         </div>
       )}
+
+      <Disclaimer className="mt-4" />
     </div>
   );
 };

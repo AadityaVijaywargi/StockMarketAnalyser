@@ -3,6 +3,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { createChart, ColorType, IChartApi } from 'lightweight-charts';
 import { DeterministicAnalysisReport, TopOpportunityCard } from '../types';
 import { apiService } from '../services/api';
+import { pickBuyAvoid, findSectorAlternatives } from '../utils/compare_suggestions';
+import { Disclaimer } from '../components/Disclaimer';
 import { SearchBar } from '../components/search/SearchBar';
 import { GitCompare, X, Loader2, TrendingUp, TrendingDown, AlertCircle, Download, ThumbsUp, ThumbsDown, Lightbulb, ArrowRight } from 'lucide-react';
 
@@ -102,38 +104,11 @@ export const ComparePage: React.FC = () => {
 
   const loadedSlots = slots.filter(s => s.report);
 
-  // Buy/Avoid pick - purely a ranking of the stocks the user actually
-  // selected, by the same real overall_score every other panel already
-  // shows. Reasons are pulled from the report's own positive/negative
-  // factors (real, computed per-stock), not generated text.
-  const rankedByScore = [...loadedSlots].sort((a, b) => b.report!.scores.overall_score - a.report!.scores.overall_score);
-  const buyPick = rankedByScore.length >= 2 ? rankedByScore[0] : null;
-  const avoidPick = rankedByScore.length >= 2 ? rankedByScore[rankedByScore.length - 1] : null;
-
-  // Better-alternative-per-sector - for each real sector represented among
-  // the compared stocks (skipping the "General Market" catch-all, which
-  // isn't a real enough sector signal to base a suggestion on), find the
-  // highest-scoring stock in that same sector from the live opportunities
-  // scan that isn't already in the comparison, and only surface it if its
-  // score genuinely beats every compared stock in that sector - never
-  // suggest a "better" alternative that isn't actually better.
-  const comparedTickers = new Set(loadedSlots.map(s => s.ticker.toUpperCase().trim()));
-  const sectorGroups = new Map<string, ComparisonSlot[]>();
-  loadedSlots.forEach(s => {
-    const sectorName = s.report!.market_context?.sector?.sector_name;
-    if (!sectorName || sectorName === 'General Market' || sectorName === 'UNKNOWN') return;
-    if (!sectorGroups.has(sectorName)) sectorGroups.set(sectorName, []);
-    sectorGroups.get(sectorName)!.push(s);
-  });
-
-  const sectorAlternatives = Array.from(sectorGroups.entries()).map(([sectorName, group]) => {
-    const bestInGroup = group.reduce((a, b) => a.report!.scores.overall_score >= b.report!.scores.overall_score ? a : b);
-    const alt = opportunities
-      .filter(o => o.sector === sectorName && !comparedTickers.has(o.ticker.toUpperCase().trim()))
-      .sort((a, b) => b.overall_score - a.overall_score)[0];
-    if (!alt || alt.overall_score <= bestInGroup.report!.scores.overall_score) return null;
-    return { sectorName, comparedTickers: group.map(g => g.ticker), bestInGroup, alt };
-  }).filter((x): x is NonNullable<typeof x> => x !== null);
+  // Buy/Avoid pick and better-alternative-per-sector - pure rankings over
+  // the real overall_score every other panel already shows (rules and
+  // rationale in utils/compare_suggestions.ts).
+  const { buyPick, avoidPick } = pickBuyAvoid(loadedSlots);
+  const sectorAlternatives = findSectorAlternatives(loadedSlots, opportunities);
 
   useEffect(() => {
     if (!chartContainerRef.current || loadedSlots.length === 0) return;
@@ -431,6 +406,10 @@ export const ComparePage: React.FC = () => {
                 ))}
               </div>
             )}
+
+            <Disclaimer>
+              Ranks only the stocks you picked, by model score. It's a research aid, not investment advice or a recommendation to buy or sell.
+            </Disclaimer>
           </div>
         )}
         </>

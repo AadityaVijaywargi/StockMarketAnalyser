@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Sparkles, BrainCircuit, ArrowUpRight, ArrowDownRight, BarChart3, ShieldCheck, Zap, Info, ShieldAlert, Clock, FileText, ChevronDown, ChevronUp, Terminal } from 'lucide-react';
 import { DeterministicAnalysisReport, SectionWithEvidence, FactorEvidence } from '../types';
 import { formatPercentage, formatNumber, formatScore, formatPrice } from '../utils/formatter';
+import { isPlaybookValid } from '../utils/playbook_validation';
 import { MarketIntelligenceSection } from './MarketIntelligenceSection';
 
 interface AIResearchPanelProps {
@@ -45,16 +46,6 @@ export const AIResearchPanel: React.FC<AIResearchPanelProps> = ({ report }) => {
   const sectorRSNifty = report.market_context?.sector?.relative_strength_vs_nifty ?? 1.0;
   const riskLevel = report.risk_profile?.level || 'Moderate';
 
-  const parseNumericPrice = (strVal: any): number | null => {
-    if (typeof strVal === 'number') return strVal;
-    if (typeof strVal === 'string') {
-      const cleaned = strVal.replace(/[^0-9.]/g, '');
-      const num = parseFloat(cleaned);
-      return !isNaN(num) ? num : null;
-    }
-    return null;
-  };
-
   const calculateStrategyFallback = () => {
     const isBuy = ['STRONG BUY', 'BUY', 'ACCUMULATE'].includes(recommendation);
     const entry = currentPrice > 0 ? currentPrice : supportMidpoint;
@@ -80,32 +71,8 @@ export const AIResearchPanel: React.FC<AIResearchPanelProps> = ({ report }) => {
     holdingPeriod: aiReport.trading_strategy.expected_holding_period
   } : calculateStrategyFallback();
 
-  const validatePlaybook = (pb: any) => {
-    if (!pb) return calculateStrategyFallback();
-
-    const entryNum = parseNumericPrice(pb.entry) ?? currentPrice;
-    const slNum = parseNumericPrice(pb.stopLoss);
-    const t1Num = parseNumericPrice(pb.target1);
-    const t2Num = parseNumericPrice(pb.target2);
-
-    if (currentPrice > 0 && slNum && t1Num) {
-      const isSlValid = slNum < entryNum && slNum < currentPrice;
-      const isTargetValid = entryNum < t1Num && (!t2Num || t1Num < t2Num);
-      const isEntryRel = Math.abs(entryNum - currentPrice) / currentPrice <= 0.08;
-      const risk = entryNum - slNum;
-      const reward = t1Num - entryNum;
-      const isRrValid = risk > 0 && reward > risk;
-
-      if (isSlValid && isTargetValid && isEntryRel && isRrValid) {
-        return pb;
-      }
-    }
-
-    // Regeneration on validation failure
-    return calculateStrategyFallback();
-  };
-
-  const playbook = validatePlaybook(rawPlaybook);
+  // Never show a setup that breaks the trade invariant - regenerate instead.
+  const playbook = isPlaybookValid(rawPlaybook, currentPrice) ? rawPlaybook : calculateStrategyFallback();
 
   const recColors: Record<string, string> = {
     'STRONG BUY': 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10 font-bold',

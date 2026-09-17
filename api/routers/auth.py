@@ -1,14 +1,18 @@
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from pydantic import BaseModel, EmailStr, Field
 import jwt
 
 from api.auth import create_access_token, decode_token_payload, hash_password, verify_password
-from api import user_store
+from api import rate_limit, user_store
 from config.settings import settings
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
+
+# Verified against when a username doesn't exist, so a login attempt costs the
+# same PBKDF2 work either way and response time doesn't reveal valid usernames.
+_DUMMY_PASSWORD_HASH = hash_password("timing-equalizer-not-a-real-password")
 
 
 class LoginRequest(BaseModel):
@@ -69,24 +73,40 @@ def _require_admin(authorization: Optional[str] = Header(None)) -> dict:
     return payload
 
 
+# Plain `def` (not async): PBKDF2 hashing is CPU-bound and deliberately slow,
+# so FastAPI runs these in its thread pool instead of blocking the event loop
+# (and every other request) for the duration of each attempt.
 @router.post("/login", response_model=LoginResponse)
-async def login(payload: LoginRequest):
-    if payload.username == settings.ADMIN_USERNAME:
-        if not verify_password(payload.password, settings.ADMIN_PASSWORD_HASH):
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid username or password")
-        token = create_access_token(payload.username, role="admin")
-        return LoginResponse(access_token=token, username=payload.username, role="admin")
+def login(payload: LoginRequest, request: Request):
+    ip_key = rate_limit.client_ip(request)
+    username_key = payload.username.strip().lower()
+    too_many = "Too many failed login attempts. Please wait before trying again."
+    rate_limit.enforce(rate_limit.FAILED_LOGINS_PER_USERNAME, username_key, too_many)
+    rate_limit.enforce(rate_limit.FAILED_LOGINS_PER_IP, ip_key, too_many)
 
-    user = user_store.get_user(payload.username)
-    if not user or not verify_password(payload.password, user["password_hash"]):
+    if payload.username == settings.ADMIN_USERNAME:
+        role, password_hash = "admin", settings.ADMIN_PASSWORD_HASH
+    else:
+        user = user_store.get_user(payload.username)
+        role, password_hash = (user["role"], user["password_hash"]) if user else (None, _DUMMY_PASSWORD_HASH)
+
+    # Always verify (even for unknown users) - don't short-circuit on role.
+    password_ok = verify_password(payload.password, password_hash)
+    if role is None or not password_ok:
+        rate_limit.FAILED_LOGINS_PER_USERNAME.record(username_key)
+        rate_limit.FAILED_LOGINS_PER_IP.record(ip_key)
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid username or password")
 
-    token = create_access_token(payload.username, role=user["role"])
-    return LoginResponse(access_token=token, username=payload.username, role=user["role"])
+    token = create_access_token(payload.username, role=role)
+    return LoginResponse(access_token=token, username=payload.username, role=role)
 
 
 @router.post("/signup", response_model=LoginResponse)
-async def signup(payload: SignupRequest):
+def signup(payload: SignupRequest, request: Request):
+    ip_key = rate_limit.client_ip(request)
+    rate_limit.enforce(rate_limit.SIGNUPS_PER_IP, ip_key, "Too many sign-up attempts. Please wait before trying again.")
+    rate_limit.SIGNUPS_PER_IP.record(ip_key)
+
     password_hash = hash_password(payload.password)
     try:
         user_store.redeem_invite_and_create_user(payload.invite_code, payload.email, payload.username, password_hash)

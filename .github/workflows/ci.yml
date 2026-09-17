@@ -51,7 +51,7 @@ jobs:
         run: python -m pytest -q -p no:cacheprovider
 
   frontend:
-    name: Frontend build
+    name: Frontend lint, tests and build
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
@@ -69,6 +69,12 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm test
 
       - name: Type-check and build
         run: npm run build

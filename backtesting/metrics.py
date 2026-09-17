@@ -15,7 +15,10 @@ class BacktestMetrics:
             return 0.0
         excess = daily_returns - (risk_free_rate / 252.0)
         std = excess.std()
-        if std == 0 or pd.isna(std):
+        # A flat curve (e.g. a strategy that never traded) gives a std that's
+        # floating-point noise (~1e-18) rather than exactly 0, which would
+        # otherwise produce an absurd Sharpe in the quadrillions.
+        if pd.isna(std) or std < 1e-12:
             return 0.0
         return float(round((excess.mean() / std) * np.sqrt(252), 2))
 
