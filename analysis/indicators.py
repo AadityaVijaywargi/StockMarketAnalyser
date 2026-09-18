@@ -230,7 +230,7 @@ def calculate_volatility_indicators(df: pd.DataFrame, settings_dict: Dict[str, A
     
     # 6. Historical Volatility (20 days annualized pct change std)
     # Annualized multiplier is sqrt(252) * 100
-    features[f"Hist_Vol_{sd_len}"] = close.pct_change().rolling(window=sd_len).std() * np.sqrt(252) * 100
+    features[f"Hist_Vol_{sd_len}"] = close.ffill().pct_change(fill_method=None).rolling(window=sd_len).std() * np.sqrt(252) * 100
     
     return features
 

@@ -36,7 +36,7 @@ class BacktestMetrics:
         final_value = float(equity_curve.iloc[-1]) if len(equity_curve) else initial_capital
         total_return_pct = round(((final_value - initial_capital) / initial_capital) * 100.0, 2)
 
-        daily_returns = equity_curve.pct_change().dropna()
+        daily_returns = equity_curve.ffill().pct_change(fill_method=None).dropna()
         closed_trades = [t for t in trades if t.get("pnl_pct") is not None]
         wins = [t for t in closed_trades if t["pnl_pct"] > 0]
         losses = [t for t in closed_trades if t["pnl_pct"] <= 0]

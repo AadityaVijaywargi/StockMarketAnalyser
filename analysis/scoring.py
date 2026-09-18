@@ -339,7 +339,7 @@ class RuleBasedScorer(BaseScorer):
             vola_total += 30
             
         # Sharpe Ratio (20-day returns mean / return standard deviation)
-        returns = features_df["Close"].pct_change().iloc[-20:].values
+        returns = features_df["Close"].ffill().pct_change(fill_method=None).iloc[-20:].values
         std_ret = np.std(returns)
         mean_ret = np.mean(returns)
         sharpe = (mean_ret / std_ret) if std_ret > 0 else 0.0

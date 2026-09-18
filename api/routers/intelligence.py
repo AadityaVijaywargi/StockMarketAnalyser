@@ -16,8 +16,8 @@ router = APIRouter(prefix="/intelligence", tags=["AI Intelligence Engine"])
 
 
 class IntelligenceReportRequest(BaseModel):
-    ticker: Optional[str] = Field(default=None, example="RELIANCE.NS", description="Stock ticker symbol")
-    timeframe: Optional[str] = Field(default="1d", example="1d", description="Candle interval")
+    ticker: Optional[str] = Field(default=None, examples=["RELIANCE.NS"], description="Stock ticker symbol")
+    timeframe: Optional[str] = Field(default="1d", examples=["1d"], description="Candle interval")
     analysis_report: Optional[Dict[str, Any]] = Field(default=None, description="Deterministic analysis report dictionary")
 
 
