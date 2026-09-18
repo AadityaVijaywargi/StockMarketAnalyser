@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Newspaper, Calendar, ShieldCheck, TrendingUp, TrendingDown, Minus, ExternalLink, ChevronDown, ChevronUp, Tag, Search, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Newspaper, Calendar, ShieldCheck, TrendingUp, TrendingDown, Minus, ExternalLink, ChevronDown, ChevronUp, Search, Sparkles } from 'lucide-react';
 import { IntelligencePack, NewsArticle, KeyEvent } from '../types';
 import { apiService } from '../services/api';
 
@@ -46,7 +46,7 @@ const getRelativeTime = (publishedAt: string): string => {
     if (diffDays === 1) return "Yesterday";
     if (diffDays < 7) return `${diffDays} days ago`;
     return publishedAt.split('T')[0] || "Recently";
-  } catch (e) {
+  } catch {
     return publishedAt.split('T')[0] || "Recently";
   }
 };
@@ -67,11 +67,14 @@ export const MarketIntelligenceSection: React.FC<MarketIntelligenceSectionProps>
     }
 
     let isMounted = true;
+    // Drop the previous ticker's pack so it isn't shown while this one loads
+    setFetchedPack(undefined);
     setIsFetching(true);
     setFetchFailed(false);
 
+    // Cleared by .finally once the request settles, so firing means timeout
     const timeoutTimer = setTimeout(() => {
-      if (isMounted && !fetchedPack) {
+      if (isMounted) {
         setIsFetching(false);
         setFetchFailed(true);
       }

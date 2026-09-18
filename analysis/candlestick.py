@@ -14,9 +14,9 @@ def calculate_returns(df: pd.DataFrame) -> pd.DataFrame:
     features = pd.DataFrame(index=df.index)
     close = df["Close"]
     
-    features["Return_Daily"] = close.pct_change()
-    features["Return_Weekly"] = close.pct_change(periods=5)
-    features["Return_Monthly"] = close.pct_change(periods=21)
+    features["Return_Daily"] = close.ffill().pct_change(fill_method=None)
+    features["Return_Weekly"] = close.ffill().pct_change(periods=5, fill_method=None)
+    features["Return_Monthly"] = close.ffill().pct_change(periods=21, fill_method=None)
     
     return features
 

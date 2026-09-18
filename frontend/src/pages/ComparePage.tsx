@@ -9,7 +9,6 @@ import { SearchBar } from '../components/search/SearchBar';
 import { GitCompare, X, Loader2, TrendingUp, TrendingDown, AlertCircle, Download, ThumbsUp, ThumbsDown, Lightbulb, ArrowRight } from 'lucide-react';
 
 const BULLISH_RECS = ['STRONG BUY', 'BUY', 'ACCUMULATE'];
-const BEARISH_RECS = ['REDUCE', 'SELL', 'STRONG SELL'];
 
 const MAX_COMPARE = 4;
 

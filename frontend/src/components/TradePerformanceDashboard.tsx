@@ -3,13 +3,6 @@ import { TrackedTrade, TradePerformanceSummary } from '../types';
 import { tradeStorageService, TRADE_STORAGE_UPDATED_EVENT } from '../services/trade_storage_service';
 import { 
   Trophy, 
-  TrendingUp, 
-  TrendingDown, 
-  Clock, 
-  BarChart3, 
-  CheckCircle2, 
-  XCircle,
-  History,
   Trash2
 } from 'lucide-react';
 

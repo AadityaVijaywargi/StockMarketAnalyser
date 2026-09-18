@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createChart, ColorType, IChartApi } from 'lightweight-charts';
 import {
-  Briefcase, TrendingUp, TrendingDown, DollarSign, Download,
-  Search, ShieldAlert, Award, ArrowUpRight, ArrowDownRight,
-  Trash2, X, RefreshCw, Layers, CheckCircle2, Clock, Activity, Zap
+  Briefcase, Download,
+  Search, Award, Trash2, Clock, Activity
 } from 'lucide-react';
 import { tradeStorageService, TRADE_STORAGE_UPDATED_EVENT } from '../services/trade_storage_service';
 import { TrackedTrade, TradePerformanceSummary } from '../types';

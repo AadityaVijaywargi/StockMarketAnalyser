@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { PredictionHorizon, PredictionResult } from '../types';
-import { Sparkles, TrendingUp, TrendingDown, Target, Shield, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
+import { Sparkles, TrendingUp, TrendingDown, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface PredictionPanelProps {
   prediction: PredictionResult | null;

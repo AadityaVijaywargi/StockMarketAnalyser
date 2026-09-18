@@ -9,11 +9,9 @@ import {
   ShieldAlert, 
   Target, 
   CheckCircle2, 
-  AlertTriangle,
   RefreshCw,
   Zap,
-  Play,
-  UserCheck
+  Play
 } from 'lucide-react';
 import { tradeStorageService, TRADE_STORAGE_UPDATED_EVENT } from '../services/trade_storage_service';
 
@@ -28,10 +26,8 @@ interface TradeSignalPanelProps {
 
 export const TradeSignalPanel: React.FC<TradeSignalPanelProps> = ({
   initialSignal,
-  prediction,
   ticker,
   activeTimeframe,
-  onTimeframeChange,
   companyName = ''
 }) => {
   const [signal, setSignal] = useState<TradeSignal | undefined>(initialSignal);
@@ -45,22 +41,21 @@ export const TradeSignalPanel: React.FC<TradeSignalPanelProps> = ({
 
   const [positionStatus, setPositionStatus] = useState<'NO_POSITION' | 'HOLDING_LONG' | 'HOLDING_SHORT'>('NO_POSITION');
 
-  // Check if current trade is tracked
-  const checkTrackingState = () => {
-    if (!ticker) return;
-    const active = tradeStorageService.getActiveTrades();
-    const clean = ticker.toUpperCase().trim();
-    const buyMatch = active.some(t => t.ticker.toUpperCase().trim() === clean && (t.tracker_type || 'BUY') === 'BUY');
-    const sellMatch = active.some(t => t.ticker.toUpperCase().trim() === clean && t.tracker_type === 'SELL');
-    setIsBuyTracked(buyMatch);
-    setIsSellTracked(sellMatch);
-  };
-
   useEffect(() => {
+    // Check if current trade is tracked
+    const checkTrackingState = () => {
+      if (!ticker) return;
+      const active = tradeStorageService.getActiveTrades();
+      const clean = ticker.toUpperCase().trim();
+      const buyMatch = active.some(t => t.ticker.toUpperCase().trim() === clean && (t.tracker_type || 'BUY') === 'BUY');
+      const sellMatch = active.some(t => t.ticker.toUpperCase().trim() === clean && t.tracker_type === 'SELL');
+      setIsBuyTracked(buyMatch);
+      setIsSellTracked(sellMatch);
+    };
+
     checkTrackingState();
-    const handleUpdate = () => checkTrackingState();
-    window.addEventListener(TRADE_STORAGE_UPDATED_EVENT, handleUpdate);
-    return () => window.removeEventListener(TRADE_STORAGE_UPDATED_EVENT, handleUpdate);
+    window.addEventListener(TRADE_STORAGE_UPDATED_EVENT, checkTrackingState);
+    return () => window.removeEventListener(TRADE_STORAGE_UPDATED_EVENT, checkTrackingState);
   }, [ticker]);
 
   const handleStartBuyTracker = () => {
@@ -140,9 +135,7 @@ export const TradeSignalPanel: React.FC<TradeSignalPanelProps> = ({
   if (!signal && !loading && !error) return null;
 
   const currentSignal: string = signal?.signal || 'WAIT';
-  const lifecycle = signal?.lifecycle_status || 'ENTRY_VALID';
   const isHolding = positionStatus === 'HOLDING_LONG';
-  const isExitSignal = currentSignal === 'SELL NOW' || currentSignal === 'AVOID' || currentSignal === 'SELL';
 
   // Badge Styling
   const getSignalBadgeStyle = () => {

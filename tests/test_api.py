@@ -1,3 +1,4 @@
+import urllib.error
 import pytest
 import pandas as pd
 from fastapi.testclient import TestClient
@@ -79,6 +80,34 @@ def test_health_endpoint():
     assert "status" in json
     assert "python_version" in json
     assert "data_provider" in json
+
+
+def _make_urlopen(outcome):
+    def _urlopen(*args, **kwargs):
+        if isinstance(outcome, Exception):
+            raise outcome
+        return outcome
+    return _urlopen
+
+
+# Outcomes are built lazily: an HTTPError with fp=None raises KeyError from
+# repr(), which breaks pytest collection if constructed in the decorator.
+@pytest.mark.parametrize("make_outcome, expected_connected", [
+    (lambda: object(), True),
+    (lambda: urllib.error.HTTPError("u", 429, "Too Many Requests", {}, None), True),
+    (lambda: urllib.error.HTTPError("u", 404, "Not Found", {}, None), True),
+    (lambda: urllib.error.URLError("dns failure"), False),
+    (lambda: TimeoutError("timed out"), False),
+], ids=["ok", "http-429", "http-404", "dns-failure", "timeout"])
+def test_health_provider_reachability(monkeypatch, make_outcome, expected_connected):
+    """An HTTP error status (Yahoo answers bare-host probes with 404/429)
+    still means reachable; only network-level failures mean disconnected."""
+    from api.routers import health as health_module
+    monkeypatch.setattr(health_module.urllib.request, "urlopen", _make_urlopen(make_outcome()))
+    json = client.get("/health").json()
+    assert json["data_provider"]["connected"] is expected_connected
+    if not expected_connected:
+        assert json["status"] == "degraded"
 
 
 def test_analyze_ticker_success():

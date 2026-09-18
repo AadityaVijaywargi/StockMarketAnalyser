@@ -15,8 +15,8 @@ def calculate_beta_correlation(stock_df: pd.DataFrame, nifty_df: pd.DataFrame) -
         return 1.0, 1.0
 
     # Align dates by performing inner join on daily percentage returns
-    stock_returns = stock_df["Close"].pct_change().dropna()
-    nifty_returns = nifty_df["Close"].pct_change().dropna()
+    stock_returns = stock_df["Close"].ffill().pct_change(fill_method=None).dropna()
+    nifty_returns = nifty_df["Close"].ffill().pct_change(fill_method=None).dropna()
     
     stock_returns = stock_returns[~stock_returns.index.duplicated(keep="last")]
     nifty_returns = nifty_returns[~nifty_returns.index.duplicated(keep="last")]

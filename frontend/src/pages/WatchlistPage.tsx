@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Star, Search, Trash2, ArrowUpDown, Clock, TrendingUp, TrendingDown, ChevronRight,
+  Star, Search, Trash2, ArrowUpDown, TrendingUp, TrendingDown, ChevronRight,
   ExternalLink, X, Pin, StickyNote, Tag as TagIcon, Bell, Plus, GitCompare, CheckSquare, Square
 } from 'lucide-react';
 import { WatchlistItem } from '../types';

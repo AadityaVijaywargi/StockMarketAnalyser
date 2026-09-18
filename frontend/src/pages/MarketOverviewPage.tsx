@@ -12,8 +12,6 @@ import {
   Globe, 
   Layers, 
   Target, 
-  Zap,
-  BarChart2,
   RefreshCw,
   Star,
   CheckCircle2,

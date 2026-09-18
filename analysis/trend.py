@@ -104,7 +104,7 @@ def analyze_horizon_trend(df_slice: pd.DataFrame, timeframe_name: str) -> Timefr
         momentum_score = 50.0
 
     # 3. Volatility (Annualized Volatility of Daily Returns)
-    returns = df_slice["Close"].pct_change().dropna().values
+    returns = df_slice["Close"].ffill().pct_change(fill_method=None).dropna().values
     if len(returns) > 1:
         volatility = float(np.std(returns) * np.sqrt(252) * 100.0)
     else:

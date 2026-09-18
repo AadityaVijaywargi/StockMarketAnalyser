@@ -23,35 +23,36 @@ export const ActiveTradePanel: React.FC<ActiveTradePanelProps> = ({ ticker, late
   const [activeTrades, setActiveTrades] = useState<TrackedTrade[]>([]);
   const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
 
-  const reloadTrades = () => {
-    const trades = tradeStorageService.getActiveTrades();
-    if (ticker) {
-      const clean = ticker.toUpperCase().trim();
-      // Filter or prioritize current ticker trade first
-      const current = trades.filter(t => t.ticker.toUpperCase().trim() === clean);
-      const others = trades.filter(t => t.ticker.toUpperCase().trim() !== clean);
-      setActiveTrades([...current, ...others]);
-    } else {
-      setActiveTrades(trades);
-    }
-  };
-
   useEffect(() => {
+    const reloadTrades = () => {
+      const trades = tradeStorageService.getActiveTrades();
+      if (ticker) {
+        const clean = ticker.toUpperCase().trim();
+        // Filter or prioritize current ticker trade first
+        const current = trades.filter(t => t.ticker.toUpperCase().trim() === clean);
+        const others = trades.filter(t => t.ticker.toUpperCase().trim() !== clean);
+        setActiveTrades([...current, ...others]);
+      } else {
+        setActiveTrades(trades);
+      }
+    };
+
     reloadTrades();
-    const handleUpdate = () => reloadTrades();
-    window.addEventListener(TRADE_STORAGE_UPDATED_EVENT, handleUpdate);
-    return () => window.removeEventListener(TRADE_STORAGE_UPDATED_EVENT, handleUpdate);
+    window.addEventListener(TRADE_STORAGE_UPDATED_EVENT, reloadTrades);
+    return () => window.removeEventListener(TRADE_STORAGE_UPDATED_EVENT, reloadTrades);
   }, [ticker]);
 
-  // Update live price for active trades if latestPrice passed
+  // Update live price for active trades if latestPrice passed. Reads trades
+  // from storage, not state: on mount `activeTrades` is still [] here, so
+  // the first price (and its stop/target check) would be skipped. Depending
+  // on `activeTrades` instead would loop, since updating a price fires the
+  // storage event that reloads it.
   useEffect(() => {
-    if (latestPrice && activeTrades.length > 0) {
-      activeTrades.forEach(trade => {
-        if (ticker && trade.ticker.toUpperCase().trim() === ticker.toUpperCase().trim()) {
-          tradeStorageService.updateTradePrice(trade.id, latestPrice);
-        }
-      });
-    }
+    if (!latestPrice || !ticker) return;
+    const clean = ticker.toUpperCase().trim();
+    tradeStorageService.getActiveTrades()
+      .filter(trade => trade.ticker.toUpperCase().trim() === clean)
+      .forEach(trade => tradeStorageService.updateTradePrice(trade.id, latestPrice));
   }, [latestPrice, ticker]);
 
   if (activeTrades.length === 0) return null;

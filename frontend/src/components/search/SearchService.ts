@@ -15,7 +15,7 @@ export interface SearchStock {
 function normalize(text: string): string {
   return text
     .toUpperCase()
-    .replace(/[&\.\-,\'"\\\/]/g, ' ')
+    .replace(/[&.\-,'"\\/]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 }
@@ -73,7 +73,7 @@ export class SearchService {
     const scoredResults: SearchStock[] = [];
 
     // Check if query is formatted like a valid exchange ticker (e.g., DEVYANI.NS, ZOMATO.NS)
-    const isTickerFormat = /^[A-Z0-9_\-\^]+(\.[A-Z]{2,4})?$/.test(rawClean);
+    const isTickerFormat = /^[A-Z0-9_\-^]+(\.[A-Z]{2,4})?$/.test(rawClean);
 
     for (const item of this.symbols) {
       const tickerFull = item.ticker.toUpperCase();

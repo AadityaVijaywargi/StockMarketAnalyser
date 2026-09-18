@@ -1,6 +1,6 @@
 import React from 'react';
 import { SearchStock } from './SearchService';
-import { Star, TrendingUp, TrendingDown, Sparkles } from 'lucide-react';
+import { Star } from 'lucide-react';
 import { useWatchlist } from '../../context/WatchlistContext';
 
 interface SearchResultProps {

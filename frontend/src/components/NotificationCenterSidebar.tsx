@@ -6,9 +6,6 @@ import {
   CheckCheck, 
   Trash2, 
   ArrowRight, 
-  ShieldAlert, 
-  AlertTriangle, 
-  Info, 
   Clock, 
   Pin, 
   Search, 
@@ -16,15 +13,10 @@ import {
   PanelRightOpen,
   Filter,
   Check,
-  Zap,
-  TrendingUp,
-  Eye,
-  SlidersHorizontal,
   Bookmark
 } from 'lucide-react';
 import { AppNotification } from '../types';
 import { useNotifications } from '../context/NotificationContext';
-import { motion, AnimatePresence } from 'framer-motion';
 
 type FilterCategory = 'ALL' | 'UNREAD' | 'TRADE_SIGNALS' | 'RECOMMENDATIONS' | 'WATCHLIST' | 'MARKET_ALERTS' | 'SYSTEM';
 
@@ -130,28 +122,6 @@ export const NotificationCenterSidebar: React.FC = () => {
   };
 
   const grouped = groupUnpinned(unpinnedList);
-
-  const getSeverityBadge = (severity: string) => {
-    if (severity === 'IMPORTANT') {
-      return (
-        <span className="text-[9px] font-mono font-bold uppercase tracking-wider bg-bearish/15 text-bearish border border-bearish/30 px-2 py-0.5 rounded-full flex items-center gap-1">
-          <ShieldAlert className="w-3 h-3" /> IMPORTANT
-        </span>
-      );
-    }
-    if (severity === 'WARNING') {
-      return (
-        <span className="text-[9px] font-mono font-bold uppercase tracking-wider bg-yellow-500/15 text-yellow-500 border border-yellow-500/30 px-2 py-0.5 rounded-full flex items-center gap-1">
-          <AlertTriangle className="w-3 h-3" /> WARNING
-        </span>
-      );
-    }
-    return (
-      <span className="text-[9px] font-mono font-bold uppercase tracking-wider bg-brand/15 text-brandText border border-brand/30 px-2 py-0.5 rounded-full flex items-center gap-1">
-        <Info className="w-3 h-3" /> INFO
-      </span>
-    );
-  };
 
   const formatTimestamp = (iso: string) => {
     try {
