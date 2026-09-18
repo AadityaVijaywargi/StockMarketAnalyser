@@ -1,6 +1,7 @@
 import time
 import logging
-from concurrent.futures import ThreadPoolExecutor, TimeoutError
+from concurrent.futures import TimeoutError
+from intelligence.timeouts import run_with_timeout
 from typing import Dict, Any, Optional
 
 from intelligence.schemas import IntelligencePack, NewsArticle, KeyEvent, OverallSentiment
@@ -99,9 +100,7 @@ class MarketIntelligenceEngine:
 
         # Execute build with strict timeout protection
         try:
-            with ThreadPoolExecutor(max_workers=1) as executor:
-                future = executor.submit(self._build_intelligence_pack_direct, ticker, company_name, sector_name)
-                return future.result(timeout=max_timeout_seconds)
+            return run_with_timeout(self._build_intelligence_pack_direct, ticker, company_name, sector_name, timeout=max_timeout_seconds)
         except TimeoutError:
             logger.warning(f"[TIMEOUT] MarketIntelligenceEngine exceeded {max_timeout_seconds}s limit for {ticker}. Returning fallback intelligence pack.")
             # Fast fallback mock pack

@@ -3,7 +3,8 @@ import urllib.request
 import urllib.parse
 import xml.etree.ElementTree as ET
 import logging
-from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError
+from concurrent.futures import as_completed, TimeoutError
+from intelligence.timeouts import abandoning_executor
 from typing import List, Dict, Any, Optional
 
 from intelligence.news_provider import BaseNewsProvider
@@ -128,8 +129,9 @@ class GoogleNewsRSSProvider(BaseNewsProvider):
         raw_articles: List[Dict[str, Any]] = []
 
         try:
-            # Parallel query execution using ThreadPoolExecutor
-            with ThreadPoolExecutor(max_workers=min(4, len(queries))) as executor:
+            # Parallel query execution; on timeout, return what has arrived
+            # without waiting for the stragglers
+            with abandoning_executor(max_workers=min(4, len(queries))) as executor:
                 futures = {
                     executor.submit(self._fetch_single_rss_query, q, timeout_seconds=2.0): q
                     for q in queries

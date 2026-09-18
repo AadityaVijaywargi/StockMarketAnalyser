@@ -1,7 +1,8 @@
 import re
 import logging
 from typing import List, Dict, Any, Optional
-from concurrent.futures import ThreadPoolExecutor, TimeoutError
+from concurrent.futures import TimeoutError
+from intelligence.timeouts import run_with_timeout
 
 logger = logging.getLogger("AIEquityResearchPlatform")
 
@@ -65,13 +66,11 @@ class CompanyResolver:
             return None
 
         try:
-            with ThreadPoolExecutor(max_workers=1) as executor:
-                future = executor.submit(_fetch_yf_name)
-                resolved_name = future.result(timeout=timeout_seconds)
-                if resolved_name:
-                    # Clean up common corporate suffixes for better search queries
-                    cleaned = re.sub(r"\b(Limited|Ltd|Inc|Corp|Corporation)\b\.?", "", resolved_name, flags=re.IGNORECASE).strip()
-                    return cleaned or resolved_name
+            resolved_name = run_with_timeout(_fetch_yf_name, timeout=timeout_seconds)
+            if resolved_name:
+                # Clean up common corporate suffixes for better search queries
+                cleaned = re.sub(r"\b(Limited|Ltd|Inc|Corp|Corporation)\b\.?", "", resolved_name, flags=re.IGNORECASE).strip()
+                return cleaned or resolved_name
         except (TimeoutError, Exception) as e:
             logger.debug(f"Dynamic company resolution skipped/timed out for {ticker}: {e}")
 
