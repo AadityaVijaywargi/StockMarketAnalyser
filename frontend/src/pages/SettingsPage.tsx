@@ -34,7 +34,7 @@ const InvitesPanel: React.FC<{ refreshKey: number }> = ({ refreshKey }) => {
     try {
       const data = await apiService.listInvites();
       setInvites(data.reverse());
-    } catch (e) {
+    } catch {
       setError('Failed to load invites.');
     } finally {
       setIsLoading(false);
@@ -67,7 +67,7 @@ const InvitesPanel: React.FC<{ refreshKey: number }> = ({ refreshKey }) => {
     try {
       await apiService.revokeInvite(code);
       await refresh();
-    } catch (e) {
+    } catch {
       setError('Failed to revoke invite.');
     }
   };

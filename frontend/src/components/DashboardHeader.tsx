@@ -5,7 +5,6 @@ import { formatPrice, formatNumber, formatPercentage } from '../utils/formatter'
 import { SearchBar } from './search/SearchBar';
 import { useWatchlist } from '../context/WatchlistContext';
 import { apiService } from '../services/api';
-import { generateStockReportPdf } from '../services/pdf_report_service';
 
 interface DashboardHeaderProps {
   report: DeterministicAnalysisReport;
@@ -33,7 +32,11 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
   const handleExportPdf = async () => {
     setIsExporting(true);
     try {
+      // Loaded on demand: jsPDF + autotable are ~400kB and only needed here
+      const { generateStockReportPdf } = await import('../services/pdf_report_service');
       generateStockReportPdf(report);
+    } catch (err) {
+      console.error('PDF export failed', err);
     } finally {
       setTimeout(() => setIsExporting(false), 400);
     }

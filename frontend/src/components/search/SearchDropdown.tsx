@@ -1,7 +1,7 @@
 import React from 'react';
 import { SearchStock } from './SearchService';
 import { SearchResult } from './SearchResult';
-import { History, TrendingUp, Search, HelpCircle, Sparkles } from 'lucide-react';
+import { History, TrendingUp, Search, HelpCircle } from 'lucide-react';
 
 interface SearchDropdownProps {
   query: string;

@@ -26,6 +26,9 @@ export const BackendWakeBanner: React.FC = () => {
 
   useEffect(() => {
     check();
+    // runId is a counter, not a DOM ref: bumping it on unmount is exactly
+    // what cancels the in-flight wait, so reading .current here is intended.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     return () => { runId.current++; };
   }, [check]);
 

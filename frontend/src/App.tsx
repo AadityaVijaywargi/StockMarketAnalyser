@@ -67,16 +67,14 @@ const saveToRecentSearches = (ticker: string) => {
 };
 
 const DashboardRouteWrapper: React.FC<{
-  error: string | null;
   setError: (val: string | null) => void;
   stagesList: string[];
 }> = ({
-  error,
   setError,
   stagesList
 }) => {
   const { ticker } = useParams<{ ticker: string }>();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const timeframe = searchParams.get('timeframe') || '1d';
   const navigate = useNavigate();
 
@@ -183,6 +181,9 @@ const DashboardRouteWrapper: React.FC<{
       isMounted = false;
       controller.abort();
     };
+    // `report` is read only to tell a new stock from a timeframe switch;
+    // depending on it would refetch after every setReport, forever.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ticker, timeframe]);
 
   const handleSearch = (newTicker: string) => {
@@ -357,7 +358,6 @@ export const App: React.FC = () => {
             element={
               <ProtectedRoute>
                 <DashboardRouteWrapper
-                  error={error}
                   setError={setError}
                   stagesList={stagesList}
                 />

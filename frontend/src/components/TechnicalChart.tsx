@@ -6,16 +6,16 @@ import { apiService } from '../services/api';
 import {
   Loader2, AlertCircle, RefreshCw, SlidersHorizontal,
   Camera, Zap, Target, ShieldAlert, Crosshair, TrendingUp,
-  BarChart2, Activity, Layers, Trash2, Eye, EyeOff, Bookmark, Maximize2,
+  Activity, Layers, Trash2, Maximize2,
   ZoomIn, ZoomOut, Scan
 } from 'lucide-react';
 import {
-  calculateEMA, calculateSMA, calculateRSI, calculateMACD, 
+  calculateEMA, calculateRSI, calculateMACD, 
   calculateBollingerBands, calculateVWAP, calculateSuperTrend
 } from '../utils/indicator_calculations';
 import { 
   calculateHeikinAshi, calculateFibonacciLevels, 
-  getSavedDrawings, saveDrawing, clearDrawings, CandlePoint 
+  getSavedDrawings, saveDrawing, clearDrawings 
 } from '../utils/chart_drawing_engine';
 import { TimeframeManager, TIMEFRAME_CONFIGS } from '../utils/chart_timeframe_manager';
 import { TradingSessionManager } from '../utils/trading_session_manager';
@@ -200,6 +200,10 @@ export const TechnicalChart: React.FC<TechnicalChartProps> = ({
         handleSelectTimeframe(clean);
       }
     }
+    // Deliberately not keyed on activeTimeframe: this syncs *parent* changes
+    // in. Re-running on local changes would snap a user's own pick back to
+    // the prop whenever the parent doesn't listen via onTimeframeChange.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [propActiveTimeframe, ticker]);
 
   const handleSelectTimeframe = async (tf: string) => {
@@ -1045,6 +1049,25 @@ export const TechnicalChart: React.FC<TechnicalChartProps> = ({
         <div className="p-12 text-center text-textMuted flex items-center justify-center gap-3 bg-background/50 rounded-xl">
           <Loader2 className="w-6 h-6 animate-spin text-brandText" />
           <span className="font-mono text-xs font-bold text-white">Loading {activeTimeframe} Technical Series for {ticker}...</span>
+        </div>
+      )}
+
+      {/* Fetch error: the canvas below still holds the previous timeframe's
+          candles, so say so rather than silently mislabelling them */}
+      {!isLoading && error && (
+        <div role="alert" className="mb-3 flex items-center justify-between gap-3 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-xs text-red-300">
+          <span className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            {error} The chart below may still show a different timeframe.
+          </span>
+          <button
+            type="button"
+            onClick={() => handleSelectTimeframe(activeTimeframe)}
+            className="flex shrink-0 items-center gap-1.5 rounded-md border border-red-500/30 px-2.5 py-1 font-bold hover:bg-red-500/20"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            Retry
+          </button>
         </div>
       )}
 

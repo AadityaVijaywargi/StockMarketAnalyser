@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { DeterministicAnalysisReport, LiveQuote, PredictionHorizon, PredictionResult } from '../types';
 import { DashboardHeader } from '../components/DashboardHeader';
 import { TopNavbar } from '../components/TopNavbar';
@@ -48,6 +48,17 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   const [predictionHorizon, setPredictionHorizon] = useState<PredictionHorizon>('1d');
   const [prediction, setPrediction] = useState<PredictionResult | null>(null);
 
+  // Latest values for the long-lived polling loop below, which is only
+  // restarted on ticker/market-open changes. checkAndNotify is rebuilt every
+  // render (it reads the current watchlist), so a captured copy would miss
+  // stocks watched after the page opened.
+  const checkAndNotifyRef = useRef(checkAndNotify);
+  const reportRef = useRef(report);
+  useEffect(() => {
+    checkAndNotifyRef.current = checkAndNotify;
+    reportRef.current = report;
+  });
+
   useEffect(() => {
     let isMounted = true;
     apiService.getPrediction(report.ticker, predictionHorizon).then(data => {
@@ -65,34 +76,32 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     
     // Check if watched stock recommendation changed
     if (report) {
-      checkAndNotify(report);
+      checkAndNotifyRef.current(report);
     }
   }, [report]);
 
-  // 2. Update AI report state with stability checks
+  // 2. Update AI report state with stability checks, against the last
+  // accepted report (functional update, so no stale aiReport closure)
   useEffect(() => {
     if (!localReport) return;
-    if (!aiReport) {
-      setAiReport(localReport);
-      return;
-    }
+    setAiReport(prev => {
+      if (!prev) return localReport;
 
-    // Stability thresholds check
-    const recommendationChanged = aiReport.scores.recommendation !== localReport.scores.recommendation;
-    const scoreMovedSignificantly = Math.abs(aiReport.scores.overall_score - localReport.scores.overall_score) > 5.0;
-    const confidenceMovedSignificantly = Math.abs((aiReport.scores?.confidence ?? 50.0) - (localReport.scores?.confidence ?? 50.0)) > 5.0;
-    const patternCountChanged = aiReport.patterns.length !== localReport.patterns.length;
-    const regimeChanged = aiReport.market_context.vix.regime !== localReport.market_context.vix.regime;
+      // Stability thresholds check
+      const recommendationChanged = prev.scores.recommendation !== localReport.scores.recommendation;
+      const scoreMovedSignificantly = Math.abs(prev.scores.overall_score - localReport.scores.overall_score) > 5.0;
+      const confidenceMovedSignificantly = Math.abs((prev.scores?.confidence ?? 50.0) - (localReport.scores?.confidence ?? 50.0)) > 5.0;
+      const patternCountChanged = prev.patterns.length !== localReport.patterns.length;
+      const regimeChanged = prev.market_context.vix.regime !== localReport.market_context.vix.regime;
 
-    if (
-      recommendationChanged ||
-      scoreMovedSignificantly ||
-      confidenceMovedSignificantly ||
-      patternCountChanged ||
-      regimeChanged
-    ) {
-      setAiReport(localReport);
-    }
+      return (
+        recommendationChanged ||
+        scoreMovedSignificantly ||
+        confidenceMovedSignificantly ||
+        patternCountChanged ||
+        regimeChanged
+      ) ? localReport : prev;
+    });
   }, [localReport]);
 
   // 3. Live Quote Polling
@@ -153,7 +162,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
               const refreshedRecommendation = await apiService.refreshRecommendation(report.ticker);
               if (isMounted) {
                 setLocalReport(prev => prev ? { ...prev, ...refreshedRecommendation } : prev);
-                checkAndNotify({ ...report, ...refreshedRecommendation });
+                checkAndNotifyRef.current({ ...reportRef.current, ...refreshedRecommendation });
               }
             } finally {
               isRefreshingRecommendation = false;

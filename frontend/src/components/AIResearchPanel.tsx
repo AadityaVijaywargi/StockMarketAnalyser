@@ -31,7 +31,6 @@ export const AIResearchPanel: React.FC<AIResearchPanelProps> = ({ report }) => {
     ? (report.resistance_zones[0].upper_bound + report.resistance_zones[0].lower_bound) / 2.0
     : currentPrice * 1.05;
 
-  const sectorName = report.market_context?.sector?.sector_name || 'Sector';
   const niftyTrend = report.market_context?.nifty?.direction || 'SIDEWAYS';
   const niftyStrength = report.market_context?.nifty?.strength ?? 50.0;
   const niftyMomentum = report.market_context?.nifty?.momentum ?? 50.0;
@@ -41,8 +40,6 @@ export const AIResearchPanel: React.FC<AIResearchPanelProps> = ({ report }) => {
   const stockBeta = report.market_context?.stock_beta ?? 1.0;
   const stockCorrelation = report.market_context?.stock_correlation ?? 0.8;
   const rsRating = report.market_context?.relative_strength_rating ?? 50.0;
-  const sectorTrend = report.market_context?.sector?.direction || 'SIDEWAYS';
-  const sectorStrength = report.market_context?.sector?.strength ?? 50.0;
   const sectorRSNifty = report.market_context?.sector?.relative_strength_vs_nifty ?? 1.0;
   const riskLevel = report.risk_profile?.level || 'Moderate';
 

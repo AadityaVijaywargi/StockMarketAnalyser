@@ -1,9 +1,9 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, X, CheckCheck, Trash2, ArrowRight, ShieldAlert, Sparkles, AlertTriangle, Info, Clock } from 'lucide-react';
+import { Bell, X, CheckCheck, Trash2, ArrowRight, ShieldAlert, AlertTriangle, Info, Clock } from 'lucide-react';
 import { AppNotification } from '../types';
 import { useNotifications } from '../context/NotificationContext';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 interface NotificationCenterModalProps {
   isOpen: boolean;

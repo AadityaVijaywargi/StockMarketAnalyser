@@ -15,16 +15,15 @@ export const PriceAlertsPanel: React.FC<PriceAlertsPanelProps> = ({ ticker, comp
   const [targetInput, setTargetInput] = useState<string>('');
   const [direction, setDirection] = useState<'above' | 'below'>('above');
 
-  const reload = () => {
-    const clean = ticker.toUpperCase().trim();
-    setAlerts(priceAlertsService.getAlerts().filter(a => a.ticker.toUpperCase() === clean));
-  };
-
   useEffect(() => {
+    const reload = () => {
+      const clean = ticker.toUpperCase().trim();
+      setAlerts(priceAlertsService.getAlerts().filter(a => a.ticker.toUpperCase() === clean));
+    };
+
     reload();
-    const handleUpdate = () => reload();
-    window.addEventListener(PRICE_ALERTS_UPDATED_EVENT, handleUpdate);
-    return () => window.removeEventListener(PRICE_ALERTS_UPDATED_EVENT, handleUpdate);
+    window.addEventListener(PRICE_ALERTS_UPDATED_EVENT, reload);
+    return () => window.removeEventListener(PRICE_ALERTS_UPDATED_EVENT, reload);
   }, [ticker]);
 
   const handleAdd = () => {

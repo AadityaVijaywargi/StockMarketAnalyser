@@ -4,7 +4,6 @@ import { notificationService } from './notification_service';
 import { tradeStorageService, TRADE_STORAGE_UPDATED_EVENT } from './trade_storage_service';
 import { priceAlertsService } from './price_alerts_service';
 import { 
-  WatchlistItem, 
   LiveQuote, 
   PredictionResult, 
   PredictionTrend, 
@@ -199,7 +198,7 @@ export class WatchlistMonitorService {
       const tickersToFetch: string[] = [];
       const now = Date.now();
 
-      for (const [cleanTicker, state] of Array.from(this.monitoredMap.entries())) {
+      for (const state of Array.from(this.monitoredMap.values())) {
         state.priority = this.computePriority(state);
         const refreshIntervalMs = state.priority === 1 ? 15000 : (state.priority === 2 ? 35000 : 65000);
         
