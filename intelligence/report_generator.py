@@ -46,10 +46,9 @@ class ReportGenerator:
         ai_report = None
 
         try:
-            from concurrent.futures import ThreadPoolExecutor, TimeoutError
-            with ThreadPoolExecutor(max_workers=1) as executor:
-                future = executor.submit(self.provider.generate, prompt, schema=AIResearchReportModel)
-                ai_report = future.result(timeout=5.0)
+            from concurrent.futures import TimeoutError
+            from intelligence.timeouts import run_with_timeout
+            ai_report = run_with_timeout(self.provider.generate, prompt, schema=AIResearchReportModel, timeout=5.0)
             llm_time_ms = round((time.time() - t_llm_start) * 1000, 2)
             logger.info(f"LLM generation completed for {ticker} ({llm_time_ms} ms)")
         except TimeoutError:

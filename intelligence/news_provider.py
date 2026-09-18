@@ -1,6 +1,7 @@
 import time
 import logging
-from concurrent.futures import ThreadPoolExecutor, TimeoutError
+from concurrent.futures import TimeoutError
+from intelligence.timeouts import run_with_timeout
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any, Optional
 
@@ -56,10 +57,8 @@ class YahooNewsProvider(BaseNewsProvider):
 
         raw_articles = []
         try:
-            with ThreadPoolExecutor(max_workers=1) as executor:
-                future = executor.submit(self._fetch_yf_news_direct, ticker)
-                raw_articles = future.result(timeout=timeout_seconds)
-            
+            raw_articles = run_with_timeout(self._fetch_yf_news_direct, ticker, timeout=timeout_seconds)
+
             elapsed_ms = round((time.time() - t_start) * 1000, 2)
             logger.info(f"YahooNewsProvider fetch completed for {ticker} ({elapsed_ms} ms)")
         except TimeoutError:
