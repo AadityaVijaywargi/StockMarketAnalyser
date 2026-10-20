@@ -1,7 +1,8 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from api.routers import health, analysis, market_opportunities, intelligence, backtest, auth, user_data, access
+from contextlib import asynccontextmanager
+from api.routers import health, analysis, market_opportunities, intelligence, backtest, auth, user_data, access, paper
 from api.auth import decode_access_token
 from api.exceptions import PlatformException, platform_exception_handler, generic_exception_handler
 from api.security import register_security
@@ -20,18 +21,32 @@ PUBLIC_PATHS = {
     "/docs", "/openapi.json", "/redoc",
 }
 
-def create_app() -> FastAPI:
+def create_app(run_paper_bot: bool = False) -> FastAPI:
     """
     Creates and configures the FastAPI application instance.
     Registers middleware, exception handlers, and API endpoints.
+
+    run_paper_bot starts the paper trading background thread (target/stop
+    checks + bot) for the app's lifetime. Only the real server entrypoint
+    (main.py) turns it on, so the test suite never spawns it.
     """
     # Refuse to start with a config that would make sessions forgeable.
     check_config(settings)
 
+    @asynccontextmanager
+    async def lifespan(_app: FastAPI):
+        if run_paper_bot:
+            from api import paper_bot
+            paper_bot.start()
+        yield
+        if run_paper_bot:
+            paper_bot.stop()
+
     app = FastAPI(
         title="AI Equity Research Platform",
         description="Quantitative technical analysis, macro-economic context, and explanation engine API.",
-        version="1.0.0"
+        version="1.0.0",
+        lifespan=lifespan,
     )
 
     production = is_production(settings)
@@ -91,6 +106,7 @@ def create_app() -> FastAPI:
     app.include_router(backtest.router)
     app.include_router(user_data.router)
     app.include_router(access.router)
+    app.include_router(paper.router)
 
     # Register Centralized Error Handlers
     app.add_exception_handler(PlatformException, platform_exception_handler)

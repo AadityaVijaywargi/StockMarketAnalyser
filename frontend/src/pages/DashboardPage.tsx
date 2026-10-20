@@ -9,8 +9,7 @@ import { SupportResistancePanel } from '../components/SupportResistancePanel';
 import { TechnicalChart } from '../components/TechnicalChart';
 import { AIResearchPanel } from '../components/AIResearchPanel';
 import { TradeSignalPanel } from '../components/TradeSignalPanel';
-import { ActiveTradePanel } from '../components/ActiveTradePanel';
-import { TradePerformanceDashboard } from '../components/TradePerformanceDashboard';
+import { PaperPositionStrip } from '../components/paper/PaperPositionStrip';
 import { PredictionPanel } from '../components/PredictionPanel';
 import { PriceAlertsPanel } from '../components/PriceAlertsPanel';
 import { apiService } from '../services/api';
@@ -297,14 +296,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         </div>
 
         <div className="w-full">
-          <ActiveTradePanel
-            ticker={activeReport.ticker}
-            latestPrice={latestQuote?.price || (activeReport.chart_data.close[activeReport.chart_data.close.length - 1])}
-          />
-        </div>
-
-        <div className="w-full">
-          <TradePerformanceDashboard />
+          <PaperPositionStrip ticker={activeReport.ticker} />
         </div>
 
         <div className="w-full">

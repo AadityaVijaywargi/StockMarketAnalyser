@@ -1,450 +1,276 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { createChart, ColorType, IChartApi } from 'lightweight-charts';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Briefcase, Download, RotateCcw, Pencil } from 'lucide-react';
+import { PaperOrderTicket } from '../components/paper/PaperOrderTicket';
+import { PaperBotPanel } from '../components/paper/PaperBotPanel';
 import {
-  Briefcase, Download,
-  Search, Award, Trash2, Clock, Activity
-} from 'lucide-react';
-import { tradeStorageService, TRADE_STORAGE_UPDATED_EVENT } from '../services/trade_storage_service';
-import { TrackedTrade, TradePerformanceSummary } from '../types';
+  PAPER_ACCOUNT_UPDATED_EVENT,
+  PaperAccount,
+  PaperOwner,
+  PaperPosition,
+  PaperTrade,
+  paperErrorMessage,
+  paperTradingService,
+} from '../services/paper_trading_service';
+import { formatPrice } from '../utils/formatter';
+import { formatSignedRupees, parseOptionalPrice, pnlClass, reasonLabel } from '../utils/paper_format';
+
+const POLL_MS = 15_000;
+
+const OwnerTag: React.FC<{ owner: PaperOwner }> = ({ owner }) => (
+  <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold font-mono ${
+    owner === 'BOT' ? 'bg-indigo-500/15 text-indigo-300 border border-indigo-500/30' : 'bg-slate-700/60 text-slate-200 border border-slate-600'
+  }`}>{owner === 'BOT' ? 'Bot' : 'You'}</span>
+);
+
+const StatCard: React.FC<{ label: string; value: string; sub?: string; valueClass?: string }> = ({ label, value, sub, valueClass = 'text-white' }) => (
+  <div className="bg-surface border border-borderDark p-4 rounded-2xl flex flex-col gap-1.5 shadow-lg min-w-0">
+    <span className="text-xs text-textMuted font-mono font-semibold">{label}</span>
+    <div className={`font-mono text-base sm:text-lg font-extrabold whitespace-nowrap ${valueClass}`}>{value}</div>
+    {sub && <span className="text-[11px] text-textMuted font-mono">{sub}</span>}
+  </div>
+);
+
+interface SellPrefill { ticker: string; owner: PaperOwner; quantity: number; companyName: string }
 
 export const PortfolioPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'active' | 'closed'>('active');
-  const [activeTrades, setActiveTrades] = useState<TrackedTrade[]>([]);
-  const [completedTrades, setCompletedTrades] = useState<TrackedTrade[]>([]);
-  const [summary, setSummary] = useState<TradePerformanceSummary>(tradeStorageService.getPerformanceSummary());
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const chartContainerRef = useRef<HTMLDivElement>(null);
-  const chartRef = useRef<IChartApi | null>(null);
+  const [account, setAccount] = useState<PaperAccount | null>(null);
+  const [history, setHistory] = useState<PaperTrade[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [sellPrefill, setSellPrefill] = useState<SellPrefill | null>(null);
+  const [editing, setEditing] = useState<PaperPosition | null>(null);
 
-  const loadData = () => {
-    setActiveTrades(tradeStorageService.getActiveTrades());
-    setCompletedTrades(tradeStorageService.getCompletedTrades());
-    setSummary(tradeStorageService.getPerformanceSummary());
-  };
-
-  useEffect(() => {
-    loadData();
-
-    const handleStorageUpdate = () => {
-      loadData();
-    };
-
-    window.addEventListener(TRADE_STORAGE_UPDATED_EVENT, handleStorageUpdate);
-    return () => {
-      window.removeEventListener(TRADE_STORAGE_UPDATED_EVENT, handleStorageUpdate);
-    };
+  const load = useCallback(async () => {
+    try {
+      const [acc, trades] = await Promise.all([paperTradingService.getAccount(), paperTradingService.getHistory(200)]);
+      setAccount(acc);
+      setHistory(trades);
+      setLoadError(null);
+    } catch (err) {
+      setLoadError(paperErrorMessage(err, 'Could not load your paper account. The server may be waking up - retrying shortly.'));
+    }
   }, []);
 
-  const handleManualClose = (tradeId: string) => {
-    tradeStorageService.closeTrade(tradeId, undefined, 'Manual exit executed by user.', 'MANUAL_EXIT');
-    loadData();
-  };
-
-  const handleDeleteTrade = (tradeId: string) => {
-    tradeStorageService.deleteTrade(tradeId);
-    loadData();
-  };
-
-  const handleExportCSV = () => {
-    const csvContent = tradeStorageService.exportToCSV();
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `STONKS_Trade_Management_Report_${new Date().toISOString().slice(0, 10)}.csv`;
-    link.click();
-    // createObjectURL leaks memory until explicitly revoked - it was never
-    // being released, so every export accumulated another live blob for
-    // the rest of the page's lifetime.
-    URL.revokeObjectURL(url);
-  };
-
-  const filterTrades = (list: TrackedTrade[]) => {
-    if (!searchQuery) return list;
-    const q = searchQuery.toUpperCase().trim();
-    return list.filter(t => t.ticker.toUpperCase().includes(q) || t.company_name.toUpperCase().includes(q));
-  };
-
-  const displayedActive = filterTrades(activeTrades);
-  const displayedClosed = filterTrades(completedTrades);
-
-  // Cumulative realized P/L over time, in exit order - the metric cards
-  // above only ever showed the current snapshot (total P/L, win rate), with
-  // no way to see whether that total built up steadily or came from one big
-  // early win followed by a losing streak. No fabricated "starting capital"
-  // baseline here (unlike the Backtesting simulator, which has an explicit
-  // user-chosen initial_capital) - this is real manually-tracked trades, so
-  // the honest curve starts at ₹0 and shows cumulative realized P/L.
-  const sortedClosed = [...completedTrades]
-    .filter(t => t.exit_time)
-    .sort((a, b) => new Date(a.exit_time!).getTime() - new Date(b.exit_time!).getTime());
-  let running = 0;
-  const equityCurve = sortedClosed.map(t => {
-    running += t.profit_amount;
-    return { time: t.exit_time!.slice(0, 10), value: Math.round(running * 100) / 100 };
-  });
-
   useEffect(() => {
-    if (!chartContainerRef.current || equityCurve.length < 2) return;
-    chartContainerRef.current.innerHTML = '';
-
-    const chart = createChart(chartContainerRef.current, {
-      width: chartContainerRef.current.clientWidth,
-      height: 260,
-      layout: {
-        background: { type: ColorType.Solid, color: '#09090b' },
-        textColor: '#94a3b8',
-        fontSize: 11,
-        fontFamily: "'Inter', sans-serif",
-      },
-      grid: {
-        vertLines: { color: 'rgba(30, 41, 59, 0.3)' },
-        horzLines: { color: 'rgba(30, 41, 59, 0.3)' },
-      },
-      rightPriceScale: { borderColor: '#1e293b' },
-      timeScale: { borderColor: '#1e293b' },
-    });
-    chartRef.current = chart;
-
-    const isProfit = equityCurve[equityCurve.length - 1].value >= 0;
-    const series = chart.addAreaSeries({
-      topColor: isProfit ? 'rgba(16, 185, 129, 0.4)' : 'rgba(239, 68, 68, 0.4)',
-      bottomColor: isProfit ? 'rgba(16, 185, 129, 0.0)' : 'rgba(239, 68, 68, 0.0)',
-      lineColor: isProfit ? '#10b981' : '#ef4444',
-      lineWidth: 2,
-    });
-    series.setData(equityCurve);
-
-    series.createPriceLine({
-      price: 0,
-      color: '#64748b',
-      lineWidth: 1,
-      lineStyle: 2,
-      axisLabelVisible: true,
-      title: 'Break-even',
-    });
-
-    chart.timeScale().fitContent();
-
-    const handleResize = () => {
-      if (chartContainerRef.current && chartRef.current) {
-        chartRef.current.resize(chartContainerRef.current.clientWidth, 260);
-      }
-    };
-    const resizeObserver = new ResizeObserver(handleResize);
-    resizeObserver.observe(chartContainerRef.current);
-    window.addEventListener('resize', handleResize);
-
+    load();
+    const id = setInterval(load, POLL_MS);
+    window.addEventListener(PAPER_ACCOUNT_UPDATED_EVENT, load);
     return () => {
-      window.removeEventListener('resize', handleResize);
-      resizeObserver.disconnect();
-      chart.remove();
+      clearInterval(id);
+      window.removeEventListener(PAPER_ACCOUNT_UPDATED_EVENT, load);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [equityCurve.length, equityCurve[equityCurve.length - 1]?.value]);
+  }, [load]);
+
+  const handleExport = async () => {
+    try {
+      const blob = await paperTradingService.downloadHistoryCsv();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `paper_trades_${new Date().toISOString().slice(0, 10)}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setLoadError(paperErrorMessage(err, 'Could not export trade history.'));
+    }
+  };
+
+  const handleReset = async () => {
+    if (!window.confirm('Reset your paper account? This clears all holdings and history, restores ₹10,00,000 cash, and switches the bot off.')) return;
+    try {
+      setAccount(await paperTradingService.reset());
+    } catch (err) {
+      setLoadError(paperErrorMessage(err, 'Could not reset the account.'));
+    }
+  };
+
+  const s = account?.summary;
+  const youPnl = s ? s.realized_pnl.YOU + s.unrealized_pnl.YOU : 0;
+  const botPnl = s ? s.realized_pnl.BOT + s.unrealized_pnl.BOT : 0;
+  const winText = (o: PaperOwner) => s ? `${s.wins[o]}W / ${s.losses[o]}L closed` : '';
 
   return (
-    <div className="w-full min-h-screen bg-background text-text font-sans p-6 md:p-8 flex flex-col gap-6 max-w-7xl mx-auto">
-      
-      {/* Workspace Header & Action Bar */}
+    <div className="w-full min-h-screen bg-background text-text font-sans px-4 pb-6 pt-20 sm:px-6 md:px-8 md:pb-8 lg:pt-8 flex flex-col gap-6 max-w-7xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-borderDark/80 pb-5">
         <div>
-          <h1 className="font-extrabold text-2xl text-white tracking-tight flex items-center gap-2.5 font-mono">
+          <h1 className="font-extrabold text-2xl text-white tracking-tight flex flex-wrap items-center gap-2.5 font-mono">
             <Briefcase className="w-6 h-6 text-brandText" />
-            <span>Trade Management & Portfolio</span>
-            <span className="text-xs bg-brand/15 border border-brand/30 text-brandText px-2.5 py-0.5 rounded-full font-bold">
-              PHASE 30 LIVE
-            </span>
+            <span>Paper Trading</span>
+            {account && (
+              <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold border ${
+                account.market_open ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-slate-800 border-slate-700 text-slate-400'
+              }`}>{account.market_open ? 'MARKET OPEN' : 'MARKET CLOSED'}</span>
+            )}
           </h1>
-          <p className="text-xs text-textMuted mt-1">Real-time Trade Management System with Automated Exit Rules & AI Analytics</p>
+          <p className="text-xs text-textMuted mt-1">Virtual cash, live NSE prices. Trade yourself, let the bot trade, and compare.</p>
         </div>
-
-        {/* CSV Export & Actions */}
-        <div className="flex items-center gap-3">
-          <button
-            onClick={handleExportCSV}
-            className="flex items-center gap-2 px-4 py-2 bg-brand/15 border border-brand/40 text-brandText rounded-xl text-xs font-mono font-bold hover:bg-brand/25 transition-all shadow-md"
-          >
-            <Download className="w-4 h-4" />
-            <span>Export to CSV</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Metric Header Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        
-        {/* Card 1: Total Realized P/L */}
-        <div className="bg-surface border border-borderDark p-4 rounded-2xl flex flex-col gap-1.5 shadow-lg">
-          <span className="text-xs text-textMuted font-mono font-semibold">Total Realized P/L</span>
-          <div className={`font-mono text-xl font-extrabold ${
-            summary.total_realized_pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'
-          }`}>
-            {summary.total_realized_pnl >= 0 ? '+' : ''}₹{summary.total_realized_pnl.toLocaleString('en-IN')}
-          </div>
-          <span className="text-[11px] text-textMuted font-mono">From {summary.closed_trades} completed trades</span>
-        </div>
-
-        {/* Card 2: Win Rate */}
-        <div className="bg-surface border border-borderDark p-4 rounded-2xl flex flex-col gap-1.5 shadow-lg">
-          <span className="text-xs text-textMuted font-mono font-semibold">Win Rate</span>
-          <div className="font-mono text-xl font-extrabold text-white flex items-center gap-2">
-            <span>{summary.win_rate_pct}%</span>
-            <span className="text-xs font-normal text-emerald-400">({summary.winning_trades}W / {summary.losing_trades}L)</span>
-          </div>
-          <span className="text-[11px] text-textMuted font-mono">Completed Trades</span>
-        </div>
-
-        {/* Card 3: Avg Gain vs Avg Loss */}
-        <div className="bg-surface border border-borderDark p-4 rounded-2xl flex flex-col gap-1.5 shadow-lg">
-          <span className="text-xs text-textMuted font-mono font-semibold">Avg Gain / Avg Loss</span>
-          <div className="font-mono text-base font-extrabold flex items-center gap-2">
-            <span className="text-emerald-400">+{summary.average_gain_pct}%</span>
-            <span className="text-textMuted font-normal">/</span>
-            <span className="text-rose-400">-{Math.abs(summary.average_loss_pct)}%</span>
-          </div>
-          <span className="text-[11px] text-textMuted font-mono">Per closed position</span>
-        </div>
-
-        {/* Card 4: Portfolio Risk/Reward */}
-        <div className="bg-surface border border-borderDark p-4 rounded-2xl flex flex-col gap-1.5 shadow-lg">
-          <span className="text-xs text-textMuted font-mono font-semibold">Portfolio Risk / Reward</span>
-          <div className="font-mono text-xl font-extrabold text-brandText">
-            1 : {summary.risk_reward_ratio}
-          </div>
-          <span className="text-[11px] text-textMuted font-mono">Average R:R Ratio</span>
-        </div>
-
-        {/* Card 5: AI Accuracy */}
-        <div className="bg-surface border border-borderDark p-4 rounded-2xl flex flex-col gap-1.5 shadow-lg">
-          <span className="text-xs text-textMuted font-mono font-semibold">AI Recommendation Accuracy</span>
-          <div className="font-mono text-xl font-extrabold text-purple-400 flex items-center gap-1.5">
-            <Award className="w-5 h-5 text-purple-400" />
-            <span>{summary.ai_accuracy_pct}%</span>
-          </div>
-          <span className="text-[11px] text-textMuted font-mono">Deterministic Signals</span>
-        </div>
-
-      </div>
-
-      {/* Cumulative Realized P/L Curve */}
-      {equityCurve.length >= 2 && (
-        <div className="bg-surface border border-borderDark p-5 rounded-2xl shadow-xl">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="font-bold text-sm text-white font-mono flex items-center gap-2">
-              <Activity className="w-4 h-4 text-brandText" />
-              <span>Cumulative Realized P/L ({sortedClosed.length} closed trades)</span>
-            </h3>
-            <span className={`text-xs font-mono font-bold ${equityCurve[equityCurve.length - 1].value >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-              {equityCurve[equityCurve.length - 1].value >= 0 ? '+' : ''}₹{equityCurve[equityCurve.length - 1].value.toLocaleString('en-IN')}
-            </span>
-          </div>
-          <div ref={chartContainerRef} className="w-full rounded-xl overflow-hidden border border-borderDark/60" />
-        </div>
-      )}
-
-      {/* Tabs & Search Filter Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-surface border border-borderDark p-3 rounded-2xl shadow-md font-mono text-xs">
-        {/* Navigation Tabs */}
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => setActiveTab('active')}
-            className={`px-4 py-2 rounded-xl font-bold transition-all flex items-center gap-2 ${
-              activeTab === 'active'
-                ? 'bg-brand text-white shadow-md shadow-brand/20'
-                : 'text-textMuted hover:text-white hover:bg-white/[0.04]'
-            }`}
-          >
-            <Activity className="w-4 h-4" />
-            <span>Active Positions ({activeTrades.length})</span>
+          <button onClick={handleExport} className="flex items-center gap-2 px-3 py-2 bg-brand/15 border border-brand/40 text-brandText rounded-xl text-xs font-mono font-bold hover:bg-brand/25 cursor-pointer">
+            <Download className="w-4 h-4" /> CSV
           </button>
-
-          <button
-            onClick={() => setActiveTab('closed')}
-            className={`px-4 py-2 rounded-xl font-bold transition-all flex items-center gap-2 ${
-              activeTab === 'closed'
-                ? 'bg-brand text-white shadow-md shadow-brand/20'
-                : 'text-textMuted hover:text-white hover:bg-white/[0.04]'
-            }`}
-          >
-            <Clock className="w-4 h-4" />
-            <span>Trade History Log ({completedTrades.length})</span>
+          <button onClick={handleReset} className="flex items-center gap-2 px-3 py-2 bg-slate-800 border border-slate-700 text-slate-300 rounded-xl text-xs font-mono font-bold hover:bg-slate-700 cursor-pointer">
+            <RotateCcw className="w-4 h-4" /> Reset
           </button>
-        </div>
-
-        {/* Search Input Filter */}
-        <div className="relative w-full sm:w-64">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-textMuted" />
-          <input
-            type="text"
-            placeholder="Search ticker or company..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-background border border-borderDark rounded-xl pl-9 pr-3 py-1.5 text-white font-sans text-xs focus:border-brand outline-none"
-          />
         </div>
       </div>
 
-      {/* ACTIVE POSITIONS TAB CONTENT */}
-      {activeTab === 'active' && (
-        <div className="flex flex-col gap-4">
-          {displayedActive.length === 0 ? (
-            <div className="bg-surface border border-borderDark/80 p-12 rounded-2xl text-center text-textMuted flex flex-col items-center gap-3">
-              <Briefcase className="w-10 h-10 text-borderDark" />
-              <p className="font-mono text-sm font-semibold">No active trade positions found.</p>
-              <p className="text-xs">Select a stock on the Dashboard and click "Track Trade" to open a position.</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 gap-4">
-              {displayedActive.map(trade => (
-                <div 
-                  key={trade.id} 
-                  className="bg-surface border border-borderDark hover:border-brand/40 p-5 rounded-2xl transition-all shadow-lg flex flex-col gap-4"
-                >
-                  {/* Top Bar */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-borderDark/60 pb-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-brand/15 border border-brand/30 flex items-center justify-center font-mono font-bold text-brandText">
-                        {trade.ticker.slice(0, 2)}
-                      </div>
-                      <div>
-                        <h4 className="font-bold text-base text-white font-mono flex items-center gap-2">
-                          <span>{trade.ticker}</span>
-                          <span className="text-xs text-textMuted font-sans">({trade.quantity} Shares)</span>
-                        </h4>
-                        <p className="text-xs text-textMuted">{trade.company_name}</p>
-                      </div>
-                    </div>
+      {loadError && <div className="text-xs text-amber-400 bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-2">{loadError}</div>}
 
-                    {/* Live P/L Badge */}
-                    <div className="flex items-center gap-3">
-                      <div className={`flex flex-col items-end px-3 py-1.5 rounded-xl border font-mono ${
-                        trade.profit_amount >= 0 
-                          ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
-                          : 'bg-rose-500/10 border-rose-500/30 text-rose-400'
-                      }`}>
-                        <span className="text-xs text-textMuted font-sans">Live P/L</span>
-                        <span className="font-extrabold text-sm">
-                          {trade.profit_amount >= 0 ? '+' : ''}₹{trade.profit_amount.toLocaleString('en-IN')} ({trade.profit_pct >= 0 ? '+' : ''}{trade.profit_pct}%)
-                        </span>
-                      </div>
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3">
+        <StatCard label="Account value" value={formatPrice(s?.equity)} sub={s ? `Started at ${formatPrice(s.starting_cash)}` : undefined} />
+        <StatCard label="Total P&L" value={formatSignedRupees(s?.total_pnl)} valueClass={pnlClass(s?.total_pnl)}
+          sub={s ? `${((s.total_pnl / s.starting_cash) * 100).toFixed(2)}%` : undefined} />
+        <StatCard label="Cash" value={formatPrice(s?.cash)} sub={s ? `Invested ${formatPrice(s.invested)}` : undefined} />
+        <StatCard label="Your P&L" value={formatSignedRupees(youPnl)} valueClass={pnlClass(youPnl)} sub={winText('YOU')} />
+        <StatCard label="Bot P&L" value={formatSignedRupees(botPnl)} valueClass={pnlClass(botPnl)} sub={winText('BOT')} />
+      </div>
 
-                      <button
-                        onClick={() => handleManualClose(trade.id)}
-                        className="px-3 py-1.5 bg-rose-500/15 border border-rose-500/40 text-rose-400 rounded-xl text-xs font-mono font-bold hover:bg-rose-500/25 transition-all"
-                      >
-                        Close Position
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Details Grid */}
-                  <div className="grid grid-cols-2 sm:grid-cols-6 gap-3 text-xs font-mono bg-background/60 p-3 rounded-xl border border-borderDark/60">
-                    <div>
-                      <span className="text-textMuted text-[10px]">Entry Price:</span>
-                      <div className="text-white font-bold">₹{trade.entry_price}</div>
-                    </div>
-
-                    <div>
-                      <span className="text-textMuted text-[10px]">Current Price:</span>
-                      <div className="text-brandText font-bold">₹{trade.current_price}</div>
-                    </div>
-
-                    <div>
-                      <span className="text-textMuted text-[10px]">Profit Target:</span>
-                      <div className="text-emerald-400 font-bold">₹{trade.target_price} ({trade.distance_to_target_pct}% away)</div>
-                    </div>
-
-                    <div>
-                      <span className="text-textMuted text-[10px]">Stop Loss:</span>
-                      <div className="text-rose-400 font-bold">₹{trade.initial_stop_loss} ({trade.distance_to_stop_pct}% away)</div>
-                    </div>
-
-                    <div>
-                      <span className="text-textMuted text-[10px]">Risk / Reward:</span>
-                      <div className="text-amber-400 font-bold">1 : {trade.risk_reward_ratio}</div>
-                    </div>
-
-                    <div>
-                      <span className="text-textMuted text-[10px]">AI Confidence:</span>
-                      <div className="text-purple-400 font-bold">{trade.ai_confidence_at_entry || trade.initial_confidence}%</div>
-                    </div>
-                  </div>
-
-                  {/* Notes & Status Footer */}
-                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-mono text-textMuted">
-                    {trade.trade_notes && (
-                      <span className="text-slate-300 italic font-sans">"Notes: {trade.trade_notes}"</span>
-                    )}
-                    <span className="text-[11px]">Opened {new Date(trade.entry_time).toLocaleString('en-IN')}</span>
-                  </div>
-
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* CLOSED TRADES HISTORY TAB CONTENT */}
-      {activeTab === 'closed' && (
-        <div className="bg-surface border border-borderDark rounded-2xl overflow-hidden shadow-xl">
-          {displayedClosed.length === 0 ? (
-            <div className="p-12 text-center text-textMuted font-mono text-sm">
-              No completed trade history available.
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse font-mono text-xs">
-                <thead>
-                  <tr className="bg-background border-b border-borderDark text-textMuted uppercase text-[10px]">
-                    <th className="p-3.5">Ticker & Company</th>
-                    <th className="p-3.5">Qty</th>
-                    <th className="p-3.5">Entry Price</th>
-                    <th className="p-3.5">Exit Price</th>
-                    <th className="p-3.5">Realized P/L</th>
-                    <th className="p-3.5">Exit Reason</th>
-                    <th className="p-3.5">Duration</th>
-                    <th className="p-3.5">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-borderDark/60">
-                  {displayedClosed.map(trade => (
-                    <tr key={trade.id} className="hover:bg-white/[0.02] transition-all">
-                      <td className="p-3.5">
-                        <div className="font-bold text-white">{trade.ticker}</div>
-                        <div className="text-[10px] text-textMuted font-sans">{trade.company_name}</div>
-                      </td>
-                      <td className="p-3.5 text-slate-300">{trade.quantity}</td>
-                      <td className="p-3.5 text-slate-300">₹{trade.entry_price}</td>
-                      <td className="p-3.5 text-slate-300">₹{trade.exit_price || trade.current_price}</td>
-                      <td className="p-3.5 font-bold">
-                        <span className={trade.profit_amount >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
-                          {trade.profit_amount >= 0 ? '+' : ''}₹{trade.profit_amount} ({trade.profit_pct >= 0 ? '+' : ''}{trade.profit_pct}%)
-                        </span>
-                      </td>
-                      <td className="p-3.5 text-slate-300 font-sans max-w-xs truncate" title={trade.exit_reason}>
-                        {trade.exit_reason}
-                      </td>
-                      <td className="p-3.5 text-textMuted">{trade.holding_time_mins} mins</td>
-                      <td className="p-3.5">
-                        <button
-                          onClick={() => handleDeleteTrade(trade.id)}
-                          className="text-textMuted hover:text-rose-400 transition-all p-1"
-                          title="Delete trade log"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </td>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 flex flex-col gap-6 min-w-0">
+          <section className="bg-surface border border-borderDark rounded-2xl p-5 shadow-lg">
+            <h2 className="text-sm font-bold text-white uppercase tracking-wider font-mono mb-3">Holdings</h2>
+            {!account ? <p className="text-xs text-textMuted">Loading…</p> : account.positions.length === 0 ? (
+              <p className="text-xs text-textMuted">No open positions. Place an order or switch the bot on.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs font-mono">
+                  <thead className="text-textMuted text-left">
+                    <tr className="border-b border-borderDark">
+                      <th className="py-2 pr-3">Stock</th><th className="py-2 pr-3 text-right">Qty</th>
+                      <th className="py-2 pr-3 text-right">Avg cost</th><th className="py-2 pr-3 text-right">Price</th>
+                      <th className="py-2 pr-3 text-right">P&L</th><th className="py-2 pr-3">Target / Stop</th><th className="py-2" />
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                  </thead>
+                  <tbody>
+                    {account.positions.map(p => (
+                      <tr key={`${p.owner}-${p.ticker}`} className="border-b border-borderDark/60">
+                        <td className="py-2.5 pr-3">
+                          <div className="flex items-center gap-1.5"><OwnerTag owner={p.owner} /><span className="font-bold text-slate-100">{p.ticker.replace('.NS', '')}</span></div>
+                          <div className="text-[10px] text-textMuted truncate max-w-[160px]">{p.company_name}</div>
+                        </td>
+                        <td className="py-2.5 pr-3 text-right">{p.quantity}</td>
+                        <td className="py-2.5 pr-3 text-right">{formatPrice(p.avg_cost)}</td>
+                        <td className="py-2.5 pr-3 text-right">{formatPrice(p.price)}</td>
+                        <td className={`py-2.5 pr-3 text-right ${pnlClass(p.unrealized_pnl)}`}>
+                          {formatSignedRupees(p.unrealized_pnl)}<div className="text-[10px]">{p.unrealized_pnl_pct.toFixed(2)}%</div>
+                        </td>
+                        <td className="py-2.5 pr-3 whitespace-nowrap">
+                          <span className="text-emerald-400">{p.target ? formatPrice(p.target) : '—'}</span>
+                          <span className="text-slate-600"> / </span>
+                          <span className="text-rose-400">{p.stop ? formatPrice(p.stop) : '—'}</span>
+                          {p.owner === 'YOU' && (
+                            <button aria-label="Edit target and stop" onClick={() => setEditing(p)} className="ml-1.5 text-slate-500 hover:text-slate-200 cursor-pointer align-middle">
+                              <Pencil className="w-3 h-3" />
+                            </button>
+                          )}
+                        </td>
+                        <td className="py-2.5 text-right">
+                          <button onClick={() => setSellPrefill({ ticker: p.ticker, owner: p.owner, quantity: p.quantity, companyName: p.company_name })}
+                            className="px-2.5 py-1 rounded-md bg-rose-500/15 border border-rose-500/30 text-rose-300 font-bold hover:bg-rose-500/25 cursor-pointer">Sell</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+
+          <section className="bg-surface border border-borderDark rounded-2xl p-5 shadow-lg">
+            <h2 className="text-sm font-bold text-white uppercase tracking-wider font-mono mb-3">Trade history</h2>
+            {history.length === 0 ? <p className="text-xs text-textMuted">No trades yet.</p> : (
+              <div className="overflow-x-auto max-h-[480px] overflow-y-auto">
+                <table className="w-full text-xs font-mono">
+                  <thead className="text-textMuted text-left sticky top-0 bg-surface">
+                    <tr className="border-b border-borderDark">
+                      <th className="py-2 pr-3">Time</th><th className="py-2 pr-3">Stock</th><th className="py-2 pr-3">Side</th>
+                      <th className="py-2 pr-3 text-right">Qty</th><th className="py-2 pr-3 text-right">Price</th>
+                      <th className="py-2 pr-3 text-right">P&L</th><th className="py-2">Reason</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {history.map(t => (
+                      <tr key={t.id} className="border-b border-borderDark/60 align-top">
+                        <td className="py-2 pr-3 text-slate-400 whitespace-nowrap">
+                          {new Date(t.time).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                        </td>
+                        <td className="py-2 pr-3"><div className="flex items-center gap-1.5"><OwnerTag owner={t.owner} />{t.ticker.replace('.NS', '')}</div></td>
+                        <td className={`py-2 pr-3 font-bold ${t.side === 'BUY' ? 'text-emerald-400' : 'text-rose-400'}`}>{t.side}</td>
+                        <td className="py-2 pr-3 text-right">{t.quantity}</td>
+                        <td className="py-2 pr-3 text-right">{formatPrice(t.price)}</td>
+                        <td className={`py-2 pr-3 text-right ${pnlClass(t.realized_pnl)}`}>{t.realized_pnl === null ? '—' : formatSignedRupees(t.realized_pnl)}</td>
+                        <td className="py-2 text-slate-300">
+                          {reasonLabel(t.reason, t.side)}
+                          {t.note && <div className="text-[10px] text-amber-400 max-w-[260px] whitespace-normal">{t.note}</div>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+        </div>
+
+        <div className="flex flex-col gap-6 min-w-0">
+          <PaperOrderTicket account={account} />
+          <PaperBotPanel refreshKey={account?.as_of} />
+        </div>
+      </div>
+
+      {sellPrefill && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4" onClick={() => setSellPrefill(null)}>
+          <div className="max-w-md w-full" onClick={e => e.stopPropagation()}>
+            <PaperOrderTicket account={account} lockTicker initialTicker={sellPrefill.ticker} initialSide="SELL"
+              initialOwner={sellPrefill.owner} initialQuantity={sellPrefill.quantity} companyName={sellPrefill.companyName}
+              onClose={() => setSellPrefill(null)} />
+          </div>
         </div>
       )}
 
+      {editing && <EditLevelsModal position={editing} onClose={() => setEditing(null)} />}
+    </div>
+  );
+};
+
+const EditLevelsModal: React.FC<{ position: PaperPosition; onClose: () => void }> = ({ position, onClose }) => {
+  const [target, setTarget] = useState(position.target ? String(position.target) : '');
+  const [stop, setStop] = useState(position.stop ? String(position.stop) : '');
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    const t = parseOptionalPrice(target);
+    const st = parseOptionalPrice(stop);
+    if (Number.isNaN(t) || Number.isNaN(st)) {
+      setError('Enter positive prices, or leave a field blank to clear it.');
+      return;
+    }
+    setSaving(true);
+    try {
+      await paperTradingService.setLevels('YOU', position.ticker, t, st);
+      onClose();
+    } catch (err) {
+      setError(paperErrorMessage(err, 'Could not update target/stop.'));
+      setSaving(false);
+    }
+  };
+
+  const input = 'w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm font-mono text-slate-100 focus:outline-none focus:border-brand';
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4" onClick={onClose}>
+      <div className="bg-surface border border-borderDark rounded-2xl p-5 max-w-sm w-full flex flex-col gap-3" onClick={e => e.stopPropagation()}>
+        <h3 className="text-sm font-bold text-white font-mono">{position.ticker.replace('.NS', '')}: target & stop-loss</h3>
+        <p className="text-xs text-textMuted">Now {formatPrice(position.price)}. Leave blank to remove. The position sells automatically when either is reached.</p>
+        <label className="block"><span className="block text-xs text-slate-300 mb-1">Target ₹</span>
+          <input type="number" step="0.05" value={target} onChange={e => setTarget(e.target.value)} className={input} /></label>
+        <label className="block"><span className="block text-xs text-slate-300 mb-1">Stop-loss ₹</span>
+          <input type="number" step="0.05" value={stop} onChange={e => setStop(e.target.value)} className={input} /></label>
+        {error && <p className="text-xs text-rose-400">{error}</p>}
+        <div className="flex justify-end gap-2">
+          <button onClick={onClose} className="px-3 py-1.5 rounded-lg bg-slate-800 text-xs text-slate-300 cursor-pointer">Cancel</button>
+          <button onClick={save} disabled={saving} className="px-4 py-1.5 rounded-lg bg-brand text-white text-xs font-bold cursor-pointer">{saving ? 'Saving…' : 'Save'}</button>
+        </div>
+      </div>
     </div>
   );
 };

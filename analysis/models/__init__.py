@@ -9,7 +9,6 @@ from analysis.models.reports import DeterministicAnalysisReport, FinalResearchRe
 from analysis.models.stock import OHLCVRow, StockData
 from analysis.models.risk import RiskProfile
 from analysis.models.trade_signal import TradeSignalModel
-from analysis.models.trade_performance import TrackedTradeModel, TradePerformanceSummaryModel
 
 __all__ = [
     "PatternDetection",
@@ -29,6 +28,4 @@ __all__ = [
     "StockData",
     "RiskProfile",
     "TradeSignalModel",
-    "TrackedTradeModel",
-    "TradePerformanceSummaryModel",
 ]

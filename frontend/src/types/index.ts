@@ -443,70 +443,6 @@ export interface PriceAlert {
   triggered_at?: string;
 }
 
-export type TradeStatus =
-  | 'ACTIVE' 
-  | 'TARGET_REACHED' 
-  | 'STOP_LOSS_REACHED' 
-  | 'TRAILING_STOP_REACHED' 
-  | 'MANUAL_EXIT' 
-  | 'TARGET_NEAR'
-  | 'EXIT_SUGGESTED'
-  | 'STOP_LOSS_HIT'
-  | 'CLOSED';
-
-export interface TrackedTrade {
-  id: string;
-  ticker: string;
-  company_name: string;
-  tracker_type?: 'BUY' | 'SELL';
-  quantity: number;
-  avg_buy_price?: number;
-  entry_price: number;
-  current_price: number;
-  investment_value: number; // entry_price * quantity
-  entry_time: string;
-  timeframe: string;
-  target_price: number;
-  initial_stop_loss: number;
-  trailing_stop_loss: number;
-
-  // Phase 30 Config Flags & Notes
-  enable_trailing_stop: boolean;
-  enable_auto_exit_target: boolean;
-  enable_auto_exit_stop: boolean;
-  trade_notes?: string;
-
-  // Phase 30 Calculated Metrics
-  risk_reward_ratio: number; // (target - entry) / (entry - stop)
-  expected_profit: number; // (target - entry) * quantity
-  max_loss: number; // (entry - stop) * quantity
-
-  // Live Metrics
-  profit_pct: number;
-  profit_amount: number;
-  distance_to_target_pct: number;
-  distance_to_stop_pct: number;
-  highest_profit_pct: number;
-  max_drawdown_pct: number;
-  target_progress_pct: number;
-  holding_time_mins: number;
-
-  // AI Intelligence at Entry & Exit
-  initial_confidence: number;
-  initial_signal: string;
-  ai_confidence_at_entry?: number;
-  ai_recommendation_at_entry?: string;
-  ai_confidence_at_exit?: number;
-  ai_recommendation_at_exit?: string;
-
-  status: TradeStatus;
-  exit_recommendation: 'HOLD' | 'EXIT NOW' | 'TAKE PROFIT' | 'STOP LOSS HIT' | 'PARTIAL SELL';
-  exit_price?: number;
-  exit_time?: string;
-  exit_reason?: string;
-  exit_signal?: string;
-}
-
 export interface BacktestTrade {
   entry_date: string;
   exit_date: string;
@@ -552,21 +488,4 @@ export interface BacktestResult {
   metrics: BacktestMetrics;
   benchmark: BacktestBenchmark;
   alpha_pct: number;
-}
-
-export interface TradePerformanceSummary {
-  total_trades: number;
-  active_trades: number;
-  closed_trades: number;
-  winning_trades: number;
-  losing_trades: number;
-  win_rate_pct: number;
-  average_gain_pct: number;
-  average_loss_pct: number;
-  risk_reward_ratio: number;
-  ai_accuracy_pct: number;
-  largest_win_pct: number;
-  largest_loss_pct: number;
-  total_realized_pnl: number;
-  average_holding_time: string;
 }

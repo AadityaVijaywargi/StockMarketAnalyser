@@ -14,6 +14,11 @@ class ValuePayload(BaseModel):
     value: Any
 
 
+# Keys owned by server-side features (the paper trading account) - readable
+# here like any synced data, but only their own endpoints may write them.
+_SERVER_OWNED_PREFIXES = ("paper_",)
+
+
 def _current_username(authorization: Optional[str] = Header(None)) -> str:
     token = authorization[len("Bearer "):] if authorization and authorization.startswith("Bearer ") else None
     if not token:
@@ -33,5 +38,7 @@ async def get_data(key: str, authorization: Optional[str] = Header(None)):
 @router.put("/data/{key}")
 async def put_data(key: str, payload: ValuePayload, authorization: Optional[str] = Header(None)):
     username = _current_username(authorization)
+    if key.startswith(_SERVER_OWNED_PREFIXES):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="This data is managed by the server")
     user_data_store.set_value(username, key, payload.value)
     return {"key": key, "value": payload.value}

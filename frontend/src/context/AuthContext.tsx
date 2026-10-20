@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { apiService } from '../services/api';
 import { watchlistService } from '../services/watchlist_service';
-import { tradeStorageService } from '../services/trade_storage_service';
 
 const TOKEN_KEY = 'stonks_auth_token';
 const USERNAME_KEY = 'stonks_auth_username';
@@ -26,7 +25,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const syncCloudData = () => {
     watchlistService.syncFromCloud();
-    tradeStorageService.syncFromCloud();
   };
 
   // Returning user with a saved session: pull down anything saved from another device.
