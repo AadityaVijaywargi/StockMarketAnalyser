@@ -7,6 +7,11 @@ from analysis.support_resistance import SRZone
 
 logger = logging.getLogger("AIEquityResearchPlatform")
 
+# The scorer emits the 7-level scale from get_recommendation_from_probability
+# (STRONG BUY ... STRONG SELL); the strong variants must count as BUY / SELL.
+BULLISH_RECOMMENDATIONS = ("BUY", "STRONG BUY")
+BEARISH_RECOMMENDATIONS = ("AVOID", "SELL", "STRONG SELL")
+
 def calculate_trade_signal(
     stock_df: pd.DataFrame,
     scores: Any,
@@ -227,7 +232,7 @@ def calculate_trade_signal(
         downside_risk_pct = round(((current_price - trailing_stop_price) / current_price) * 100.0, 2)
         rally_probability = min(round(confidence * 0.88, 0), 92.0)
 
-        if current_price >= nearest_resistance * 0.995 or overall_score <= 48.0 or rec in ["AVOID", "SELL"]:
+        if current_price >= nearest_resistance * 0.995 or overall_score <= 48.0 or rec in BEARISH_RECOMMENDATIONS:
             signal = "SELL NOW"
             signal_type = "SELL_NOW"
             lifecycle_status = "EXIT_SUGGESTED"
@@ -277,12 +282,12 @@ def calculate_trade_signal(
             signal_type = "WAIT"
             lifecycle_status = "MISSED_ENTRY"
             status_note = "Entry Missed. Price outpaced entry zone; wait for a pullback."
-        elif rec == "BUY" and overall_score >= 66.0:
+        elif rec in BULLISH_RECOMMENDATIONS and overall_score >= 66.0:
             signal = "BUY NOW"
             signal_type = "BUY_NOW"
             lifecycle_status = "ENTRY_VALID"
             status_note = "Favorable Risk/Reward Entry. Technical trend alignment confirmed."
-        elif rec in ["AVOID", "SELL"] or overall_score <= 42.0:
+        elif rec in BEARISH_RECOMMENDATIONS or overall_score <= 42.0:
             signal = "SELL NOW"
             signal_type = "SELL_NOW"
             lifecycle_status = "EXIT_SUGGESTED"
