@@ -1,7 +1,6 @@
 import { apiService } from './api';
 import { watchlistService, WATCHLIST_UPDATED_EVENT } from './watchlist_service';
 import { notificationService } from './notification_service';
-import { tradeStorageService, TRADE_STORAGE_UPDATED_EVENT } from './trade_storage_service';
 import { priceAlertsService } from './price_alerts_service';
 import { 
   LiveQuote, 
@@ -60,12 +59,9 @@ export class WatchlistMonitorService {
     if (this.isRunning) return;
     this.isRunning = true;
     
-    // Subscribe to watchlist storage updates, and to trades opening/closing
-    // - an active trade's ticker needs to be monitored here too (see
-    // syncWatchlistItems) even if it was never added to the watchlist.
+    // Subscribe to watchlist storage updates.
     if (typeof window !== 'undefined') {
       window.addEventListener(WATCHLIST_UPDATED_EVENT, this.handleWatchlistChange);
-      window.addEventListener(TRADE_STORAGE_UPDATED_EVENT, this.handleWatchlistChange);
     }
 
     // Initial baseline sync
@@ -90,7 +86,6 @@ export class WatchlistMonitorService {
     }
     if (typeof window !== 'undefined') {
       window.removeEventListener(WATCHLIST_UPDATED_EVENT, this.handleWatchlistChange);
-      window.removeEventListener(TRADE_STORAGE_UPDATED_EVENT, this.handleWatchlistChange);
     }
   }
 
@@ -100,18 +95,11 @@ export class WatchlistMonitorService {
   }
 
   /**
-   * Syncs internal monitor state map with items in WatchlistStorage, plus
-   * any ticker with an open active trade - a trade's live price/P&L was
-   * previously only ever refreshed by ActiveTradePanel while that exact
-   * stock's dashboard happened to be open (and never at all if the traded
-   * stock wasn't also watchlisted), so most active trades displayed a
-   * stale price on PortfolioPage. This monitor already polls quotes in
-   * the background regardless of which page is open, so it's the right
-   * place to keep trade prices current too (see executeRefreshLoop).
+   * Syncs internal monitor state map with items in WatchlistStorage. (Paper
+   * trading positions are priced and exited server-side, see /paper/*.)
    */
   private syncWatchlistItems(): void {
     const items = watchlistService.getWatchlist();
-    const activeTrades = tradeStorageService.getActiveTrades();
 
     const combined = new Map<string, { ticker: string; companyName: string; exchange: string }>();
     for (const item of items) {
@@ -121,14 +109,8 @@ export class WatchlistMonitorService {
         exchange: item.exchange || 'NSE',
       });
     }
-    for (const trade of activeTrades) {
-      const clean = trade.ticker.toUpperCase().trim();
-      if (!combined.has(clean)) {
-        combined.set(clean, { ticker: trade.ticker, companyName: trade.company_name || trade.ticker, exchange: 'NSE' });
-      }
-    }
 
-    // Remove tickers that are neither watchlisted nor actively traded
+    // Remove tickers that are no longer watchlisted
     for (const key of Array.from(this.monitoredMap.keys())) {
       if (!combined.has(key)) {
         this.monitoredMap.delete(key);
@@ -163,9 +145,7 @@ export class WatchlistMonitorService {
    * Computes priority level for a stock based on active positions and volatility.
    */
   private computePriority(state: MonitoredStockState): 1 | 2 | 3 {
-    const activeTrades = tradeStorageService.getActiveTrades();
-    const isTracked = activeTrades.some(t => t.ticker.toUpperCase().trim() === state.ticker.toUpperCase().trim());
-    if (isTracked || state.eventOverrideApplied || Math.abs(state.quote?.change_pct ?? 0) >= 1.5) {
+    if (state.eventOverrideApplied || Math.abs(state.quote?.change_pct ?? 0) >= 1.5) {
       return 1; // High priority (15s)
     }
     if (Math.abs(state.quote?.change_pct ?? 0) <= 0.2) {
@@ -288,16 +268,6 @@ export class WatchlistMonitorService {
                 current_price: quote.price,
               });
             });
-
-            // Keep any open active trade on this ticker's live price/P&L
-            // current in the background too - see the note on
-            // syncWatchlistItems for why this previously never happened
-            // unless that exact stock's dashboard page was open.
-            for (const trade of tradeStorageService.getActiveTrades()) {
-              if (trade.ticker.toUpperCase().trim() === clean) {
-                tradeStorageService.updateTradePrice(trade.id, quote.price, pred.confidence, pred.recommendation);
-              }
-            }
           }
         }
       }

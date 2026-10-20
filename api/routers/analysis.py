@@ -171,8 +171,10 @@ def fetch_live_quote(ticker: str, live_cache: InMemoryLiveCache, cache: Optional
         except Exception as e:
             logger.warning(f"File cache fallback failed for {ticker}: {e}")
 
-    # 4. Safe fallback defaults
-    if not is_valid_num(price): price = 100.0
+    # 4. Safe fallback defaults. A placeholder price is fine for display but
+    # must never be traded on - paper trading checks is_fallback_price.
+    is_fallback_price = not is_valid_num(price)
+    if is_fallback_price: price = 100.0
     if not is_valid_num(prev_close): prev_close = price
     if not is_valid_num(high): high = price
     if not is_valid_num(low): low = price
@@ -195,9 +197,10 @@ def fetch_live_quote(ticker: str, live_cache: InMemoryLiveCache, cache: Optional
         "low": round(float(low), 2),
         "volume": int(volume),
         "last_updated": now.isoformat(),
-        "is_market_open": is_open
+        "is_market_open": is_open,
+        "is_fallback_price": is_fallback_price,
     }
-    
+
     # Save to cache
     live_cache.set_quote(ticker, quote)
     return quote

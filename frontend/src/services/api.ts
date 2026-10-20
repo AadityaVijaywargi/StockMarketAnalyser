@@ -17,14 +17,14 @@ export interface AccessRequest {
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8002';
 const TOKEN_KEY = 'stonks_auth_token';
 
-const client = axios.create({
+export const apiClient = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-client.interceptors.request.use((config) => {
+apiClient.interceptors.request.use((config) => {
   const token = localStorage.getItem(TOKEN_KEY);
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -32,7 +32,7 @@ client.interceptors.request.use((config) => {
   return config;
 });
 
-client.interceptors.response.use(
+apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     const url = error.config?.url || '';
@@ -53,12 +53,12 @@ export const apiService = {
    * Fetch service health status
    */
   async getHealth() {
-    const response = await client.get('/health');
+    const response = await apiClient.get('/health');
     return response.data;
   },
 
   async login(username: string, password: string): Promise<{ access_token: string; username: string; role: string }> {
-    const response = await client.post('/auth/login', { username, password });
+    const response = await apiClient.post('/auth/login', { username, password });
     return response.data;
   },
 
@@ -77,50 +77,50 @@ export const apiService = {
     company_website: string;
     rendered_at: number;
   }): Promise<{ accepted: boolean; message: string }> {
-    const response = await client.post('/access-requests', payload);
+    const response = await apiClient.post('/access-requests', payload);
     return response.data;
   },
 
   async signup(inviteCode: string, email: string, username: string, password: string): Promise<{ access_token: string; username: string; role: string }> {
-    const response = await client.post('/auth/signup', { invite_code: inviteCode, email, username, password });
+    const response = await apiClient.post('/auth/signup', { invite_code: inviteCode, email, username, password });
     return response.data;
   },
 
   async createInvite(email: string): Promise<{ code: string; email: string }> {
-    const response = await client.post('/auth/invites', { email });
+    const response = await apiClient.post('/auth/invites', { email });
     return response.data;
   },
 
   async listInvites(): Promise<Array<{ code: string; email: string | null; created_by: string; created_at: string; used: boolean; used_by: string | null }>> {
-    const response = await client.get('/auth/invites');
+    const response = await apiClient.get('/auth/invites');
     return response.data;
   },
 
   async revokeInvite(code: string): Promise<void> {
-    await client.delete(`/auth/invites/${code}`);
+    await apiClient.delete(`/auth/invites/${code}`);
   },
 
   // Access-request review queue (admin only).
   async listAccessRequests(): Promise<AccessRequest[]> {
-    const response = await client.get('/access-requests');
+    const response = await apiClient.get('/access-requests');
     return response.data;
   },
 
   /** Issues an invite for the request's email and marks the request invited. */
   async approveAccessRequest(id: string): Promise<{ code: string; email: string }> {
-    const response = await client.post(`/access-requests/${encodeURIComponent(id)}/approve`);
+    const response = await apiClient.post(`/access-requests/${encodeURIComponent(id)}/approve`);
     return response.data;
   },
 
   async deleteAccessRequest(id: string): Promise<void> {
-    await client.delete(`/access-requests/${encodeURIComponent(id)}`);
+    await apiClient.delete(`/access-requests/${encodeURIComponent(id)}`);
   },
 
   /**
    * Runs complete quantitative analysis on a single stock ticker.
    */
   async analyzeTicker(ticker: string, timeframe: string = '1d', signal?: AbortSignal, debug: boolean = true, forceRefresh: boolean = false): Promise<DeterministicAnalysisReport> {
-    const response = await client.get<DeterministicAnalysisReport>(`/analyze/${ticker}`, {
+    const response = await apiClient.get<DeterministicAnalysisReport>(`/analyze/${ticker}`, {
       params: { timeframe, debug, force_refresh: forceRefresh },
       signal,
     });
@@ -131,7 +131,7 @@ export const apiService = {
    * Fetches lightweight real-time price quotes.
    */
   async getLiveQuote(ticker: string): Promise<LiveQuote> {
-    const response = await client.get<LiveQuote>(`/analyze/${ticker}/quote`);
+    const response = await apiClient.get<LiveQuote>(`/analyze/${ticker}/quote`);
     return response.data;
   },
 
@@ -139,12 +139,12 @@ export const apiService = {
    * Recalculates score outputs from the latest live quote without rebuilding the full report.
    */
   async refreshRecommendation(ticker: string): Promise<RecommendationRefresh> {
-    const response = await client.get<RecommendationRefresh>(`/analyze/${ticker}/recommendation`);
+    const response = await apiClient.get<RecommendationRefresh>(`/analyze/${ticker}/recommendation`);
     return response.data;
   },
 
   async getPrediction(ticker: string, horizon: PredictionHorizon): Promise<PredictionResult> {
-    const response = await client.get<PredictionResult>(`/analyze/${ticker}/prediction`, { params: { horizon } });
+    const response = await apiClient.get<PredictionResult>(`/analyze/${ticker}/prediction`, { params: { horizon } });
     return response.data;
   },
 
@@ -153,7 +153,7 @@ export const apiService = {
    */
   async getWatchlistPredictions(tickers: string[], horizon: string = '1d'): Promise<Record<string, any>> {
     if (!tickers || tickers.length === 0) return {};
-    const response = await client.post<Record<string, any>>('/analyze/watchlist-predictions', {
+    const response = await apiClient.post<Record<string, any>>('/analyze/watchlist-predictions', {
       tickers,
       horizon
     });
@@ -164,7 +164,7 @@ export const apiService = {
    * Runs batch quantitative analysis on multiple stock tickers.
    */
   async analyzeMultiple(tickers: string[], timeframe: string = '1d', debug: boolean = false): Promise<DeterministicAnalysisReport[]> {
-    const response = await client.post<DeterministicAnalysisReport[]>('/analyze', tickers, {
+    const response = await apiClient.post<DeterministicAnalysisReport[]>('/analyze', tickers, {
       params: { timeframe, debug },
     });
     return response.data;
@@ -174,7 +174,7 @@ export const apiService = {
    * Fetches top stock opportunities computed across liquid market universe.
    */
   async getTopOpportunities(limit: number = 12, forceRefresh: boolean = false): Promise<TopOpportunitiesResponse> {
-    const response = await client.get<TopOpportunitiesResponse>('/market/top-opportunities', {
+    const response = await apiClient.get<TopOpportunitiesResponse>('/market/top-opportunities', {
       params: { limit, force_refresh: forceRefresh }
     });
     return response.data;
@@ -184,7 +184,7 @@ export const apiService = {
    * Generates AI intelligence research report for a stock or analysis payload.
    */
   async getIntelligenceReport(ticker: string, timeframe: string = '1d', analysisReport?: DeterministicAnalysisReport): Promise<DeterministicAnalysisReport> {
-    const response = await client.post<DeterministicAnalysisReport>('/intelligence/report', {
+    const response = await apiClient.post<DeterministicAnalysisReport>('/intelligence/report', {
       ticker,
       timeframe,
       analysis_report: analysisReport
@@ -196,7 +196,7 @@ export const apiService = {
    * Fetches standalone Market Intelligence Pack for a stock.
    */
   async getIntelligenceNews(ticker: string, companyName: string = '', sectorName: string = '') {
-    const response = await client.get(`/intelligence/news/${ticker}`, {
+    const response = await apiClient.get(`/intelligence/news/${ticker}`, {
       params: { company_name: companyName, sector_name: sectorName }
     });
     return response.data;
@@ -206,7 +206,7 @@ export const apiService = {
    * Fetches clean historical OHLC chart data for a given stock and timeframe option.
    */
   async getHistoricalChart(ticker: string, timeframe: string = '1D'): Promise<any> {
-    const response = await client.get(`/analyze/${ticker}/chart`, { params: { timeframe } });
+    const response = await apiClient.get(`/analyze/${ticker}/chart`, { params: { timeframe } });
     return response.data;
   },
 
@@ -214,7 +214,7 @@ export const apiService = {
    * Diagnostic mode endpoint returning exchange timezone, market status, and raw candle verification.
    */
   async getChartDiagnostics(ticker: string): Promise<any> {
-    const response = await client.get(`/analyze/${ticker}/chart-diagnostics`);
+    const response = await apiClient.get(`/analyze/${ticker}/chart-diagnostics`);
     return response.data;
   },
 
@@ -222,7 +222,7 @@ export const apiService = {
    * Fetches recalculated Real-Time Trade Signal for a stock, timeframe option, and position status.
    */
   async getTradeSignal(ticker: string, timeframe: string = '1D', positionStatus: string = 'NO_POSITION'): Promise<TradeSignal> {
-    const response = await client.get<TradeSignal>(`/analyze/${ticker}/trade-signal`, {
+    const response = await apiClient.get<TradeSignal>(`/analyze/${ticker}/trade-signal`, {
       params: { timeframe, position_status: positionStatus }
     });
     return response.data;
@@ -232,7 +232,7 @@ export const apiService = {
    * Fetches full Market Intelligence Dashboard payload for Phase 23.
    */
   async getMarketOverview(forceRefresh: boolean = false) {
-    const response = await client.get('/market/overview', {
+    const response = await apiClient.get('/market/overview', {
       params: { force_refresh: forceRefresh }
     });
     return response.data;
@@ -243,7 +243,7 @@ export const apiService = {
    * equity curve, trade log, and summary performance metrics.
    */
   async runBacktest(ticker: string, period: string = '5y', initialCapital: number = 100000, strategy: string = 'trend_momentum'): Promise<BacktestResult> {
-    const response = await client.post<BacktestResult>('/backtest/run', {
+    const response = await apiClient.post<BacktestResult>('/backtest/run', {
       ticker, period, initial_capital: initialCapital, strategy
     });
     return response.data;

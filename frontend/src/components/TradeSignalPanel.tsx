@@ -8,12 +8,12 @@ import {
   Clock, 
   ShieldAlert, 
   Target, 
-  CheckCircle2, 
+  CheckCircle2,
   RefreshCw,
   Zap,
   Play
 } from 'lucide-react';
-import { tradeStorageService, TRADE_STORAGE_UPDATED_EVENT } from '../services/trade_storage_service';
+import { PaperTradeModal } from './paper/PaperTradeModal';
 
 interface TradeSignalPanelProps {
   initialSignal?: TradeSignal;
@@ -33,69 +33,9 @@ export const TradeSignalPanel: React.FC<TradeSignalPanelProps> = ({
   const [signal, setSignal] = useState<TradeSignal | undefined>(initialSignal);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [isBuyTracked, setIsBuyTracked] = useState<boolean>(false);
-  const [isSellTracked, setIsSellTracked] = useState<boolean>(false);
-  const [showSellModal, setShowSellModal] = useState<boolean>(false);
-  const [sellAvgPrice, setSellAvgPrice] = useState<number>(0);
-  const [sellQty, setSellQty] = useState<number>(10);
+  const [showPaperBuy, setShowPaperBuy] = useState<boolean>(false);
 
   const [positionStatus, setPositionStatus] = useState<'NO_POSITION' | 'HOLDING_LONG' | 'HOLDING_SHORT'>('NO_POSITION');
-
-  useEffect(() => {
-    // Check if current trade is tracked
-    const checkTrackingState = () => {
-      if (!ticker) return;
-      const active = tradeStorageService.getActiveTrades();
-      const clean = ticker.toUpperCase().trim();
-      const buyMatch = active.some(t => t.ticker.toUpperCase().trim() === clean && (t.tracker_type || 'BUY') === 'BUY');
-      const sellMatch = active.some(t => t.ticker.toUpperCase().trim() === clean && t.tracker_type === 'SELL');
-      setIsBuyTracked(buyMatch);
-      setIsSellTracked(sellMatch);
-    };
-
-    checkTrackingState();
-    window.addEventListener(TRADE_STORAGE_UPDATED_EVENT, checkTrackingState);
-    return () => window.removeEventListener(TRADE_STORAGE_UPDATED_EVENT, checkTrackingState);
-  }, [ticker]);
-
-  const handleStartBuyTracker = () => {
-    if (!signal || !ticker) return;
-    tradeStorageService.startBuyTracker({
-      ticker,
-      company_name: companyName || ticker,
-      entry_price: signal.current_price,
-      timeframe: activeTimeframe,
-      target_price: signal.target_price || Number((signal.current_price * 1.05).toFixed(2)),
-      stop_loss: signal.stop_loss_price || Number((signal.current_price * 0.95).toFixed(2)),
-      confidence: signal.confidence,
-      signal: signal.signal
-    });
-    setIsBuyTracked(true);
-  };
-
-  const handleOpenSellModal = () => {
-    if (!signal) return;
-    setSellAvgPrice(signal.current_price);
-    setShowSellModal(true);
-  };
-
-  const handleConfirmSellTracker = () => {
-    if (!signal || !ticker) return;
-    tradeStorageService.startSellTracker({
-      ticker,
-      company_name: companyName || ticker,
-      current_price: signal.current_price,
-      avg_buy_price: sellAvgPrice || signal.current_price,
-      quantity: sellQty || 1,
-      timeframe: activeTimeframe,
-      trailing_stop: signal.trailing_stop_price || Number((signal.current_price * 0.97).toFixed(2)),
-      target_price: signal.next_resistance_target || Number((signal.current_price * 1.05).toFixed(2)),
-      confidence: signal.confidence,
-      signal: signal.signal
-    });
-    setIsSellTracked(true);
-    setShowSellModal(false);
-  };
 
   // Sync initial signal when report changes
   useEffect(() => {
@@ -176,58 +116,16 @@ export const TradeSignalPanel: React.FC<TradeSignalPanelProps> = ({
 
   return (
     <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-5 shadow-xl backdrop-blur-md transition-all duration-300 relative overflow-hidden">
-      {/* Sell Configuration Modal */}
-      {showSellModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
-          <div className="bg-slate-900 border border-slate-700 rounded-xl p-5 max-w-md w-full shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-            <h3 className="text-sm font-bold text-slate-100 uppercase tracking-wider mb-1 flex items-center gap-2">
-              <Play className="w-4 h-4 text-brandText fill-brand" />
-              Configure Sell Tracker Position
-            </h3>
-            <p className="text-xs text-slate-400 mb-4 leading-relaxed">
-              Enter your purchase details for <span className="text-slate-200 font-bold">{companyName || ticker}</span> to monitor unrealized P&L, exit triggers, and trailing stops.
-            </p>
-
-            <div className="space-y-3 mb-5">
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Average Buy Price (₹)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={sellAvgPrice}
-                  onChange={(e) => setSellAvgPrice(parseFloat(e.target.value) || 0)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm font-bold text-emerald-400 focus:outline-none focus:border-brand"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Quantity Owned (Optional)</label>
-                <input
-                  type="number"
-                  step="1"
-                  value={sellQty}
-                  onChange={(e) => setSellQty(parseInt(e.target.value) || 1)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm font-bold text-slate-200 focus:outline-none focus:border-brand"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-2">
-              <button
-                onClick={() => setShowSellModal(false)}
-                className="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 transition-all cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleConfirmSellTracker}
-                className="px-4 py-1.5 rounded-lg bg-brand hover:bg-indigo-600 text-white text-xs font-bold shadow-md shadow-brand/30 transition-all cursor-pointer"
-              >
-                Start Tracking Sell
-              </button>
-            </div>
-          </div>
-        </div>
+      {showPaperBuy && signal && (
+        <PaperTradeModal
+          lockTicker
+          initialTicker={ticker}
+          companyName={companyName || ticker}
+          initialSide="BUY"
+          initialTarget={signal.target_price ?? null}
+          initialStop={signal.stop_loss_price ?? null}
+          onClose={() => setShowPaperBuy(false)}
+        />
       )}
 
       {/* Background Glow Overlay */}
@@ -293,39 +191,16 @@ export const TradeSignalPanel: React.FC<TradeSignalPanelProps> = ({
           </div>
         </div>
 
-        {/* Signal Badge & Dual Tracker Action Buttons */}
+        {/* Signal Badge & Paper Buy */}
         <div className="flex flex-wrap items-center gap-2.5">
-          {/* Buy Tracker Button */}
-          {isBuyTracked ? (
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold">
-              <CheckCircle2 className="w-4 h-4" />
-              <span>Buy Tracked</span>
-            </div>
-          ) : (
-            <button
-              onClick={handleStartBuyTracker}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold text-xs shadow-md shadow-emerald-950/40 transition-all transform active:scale-95 cursor-pointer"
-            >
-              <Play className="w-3.5 h-3.5 fill-slate-950" />
-              <span>+ Start Buy Tracker</span>
-            </button>
-          )}
-
-          {/* Sell Tracker Button */}
-          {isSellTracked ? (
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand/15 border border-brand/40 text-brandText text-xs font-semibold">
-              <CheckCircle2 className="w-4 h-4" />
-              <span>Sell Tracked</span>
-            </div>
-          ) : (
-            <button
-              onClick={handleOpenSellModal}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand hover:bg-indigo-600 text-white font-bold text-xs shadow-md shadow-brand/30 transition-all transform active:scale-95 cursor-pointer"
-            >
-              <Play className="w-3.5 h-3.5 fill-white" />
-              <span>+ Start Sell Tracker</span>
-            </button>
-          )}
+          <button
+            onClick={() => setShowPaperBuy(true)}
+            disabled={!signal}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold text-xs shadow-md shadow-emerald-950/40 transition-all transform active:scale-95 cursor-pointer"
+          >
+            <Play className="w-3.5 h-3.5 fill-slate-950" />
+            <span>Paper buy</span>
+          </button>
 
           <div className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full border font-bold text-sm tracking-wide shadow-lg ${getSignalBadgeStyle()}`}>
             {getSignalDot()}
