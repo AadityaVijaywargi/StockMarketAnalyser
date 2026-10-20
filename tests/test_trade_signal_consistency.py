@@ -170,3 +170,86 @@ def test_timeframe_specific_metrics_scaling():
     assert sig_1w["holding_time"] == "1–3 weeks"
     assert sig_1m["holding_time"] == "1–3 months"
 
+
+
+def _flat_df(close):
+    dates = pd.date_range(end=pd.Timestamp.now(), periods=50, freq='D')
+    return pd.DataFrame({
+        "Open": [750.0] * 50,
+        "High": [755.0] * 50,
+        "Low": [740.0] * 50,
+        "Close": [close] * 50,
+        "Volume": [100000] * 50
+    }, index=dates)
+
+
+def _zone(lower, upper, level_type):
+    return SRZone(
+        upper_bound=upper,
+        lower_bound=lower,
+        strength=0.8,
+        touches=3,
+        average_volume=100000.0,
+        first_detection="2026-01-01",
+        last_confirmation="2026-07-20",
+        level_type=level_type
+    )
+
+
+@pytest.mark.parametrize("recommendation", ["BUY", "STRONG BUY"])
+def test_strong_buy_recommendation_emits_buy_now(recommendation):
+    # The scorer's 7-level scale puts the most bullish names at STRONG BUY;
+    # they must not fall through to WAIT just because the label isn't "BUY".
+    scores = DummyScores(overall_score=78.0, recommendation=recommendation, confidence=88.0)
+    signal_dict = calculate_trade_signal(
+        _flat_df(745.0), scores,
+        [_zone(735.0, 740.0, "support")], [_zone(770.0, 775.0, "resistance")],
+        DummyRiskProfile(level="Low"), timeframe="1D"
+    )
+
+    assert signal_dict["signal_type"] == "BUY_NOW"
+    assert signal_dict["lifecycle_status"] == "ENTRY_VALID"
+    # Trade-setup invariant: Stop < Current <= Entry < Target, R:R > 1
+    assert signal_dict["stop_loss_price"] < signal_dict["current_price"]
+    assert signal_dict["current_price"] <= signal_dict["entry_zone_high"]
+    assert signal_dict["entry_zone_high"] < signal_dict["target_price"]
+    assert signal_dict["risk_reward_ratio"] > 1
+
+
+def test_strong_buy_below_score_threshold_still_waits():
+    scores = DummyScores(overall_score=60.0, recommendation="STRONG BUY", confidence=88.0)
+    signal_dict = calculate_trade_signal(
+        _flat_df(745.0), scores,
+        [_zone(735.0, 740.0, "support")], [_zone(770.0, 775.0, "resistance")],
+        DummyRiskProfile(level="Low"), timeframe="1D"
+    )
+
+    assert signal_dict["signal_type"] == "WAIT"
+
+
+@pytest.mark.parametrize("recommendation", ["SELL", "STRONG SELL", "AVOID"])
+def test_strong_sell_recommendation_emits_sell_now(recommendation):
+    # Score is deliberately above the 42 floor so the recommendation alone
+    # has to drive SELL NOW.
+    scores = DummyScores(overall_score=55.0, recommendation=recommendation, confidence=85.0)
+    signal_dict = calculate_trade_signal(
+        _flat_df(742.80), scores,
+        [_zone(730.0, 735.0, "support")], [_zone(760.0, 765.0, "resistance")],
+        DummyRiskProfile(), timeframe="1D"
+    )
+
+    assert signal_dict["signal_type"] == "SELL_NOW"
+    assert signal_dict["entry_zone_low"] is None
+    assert signal_dict["target_price"] is None
+    assert signal_dict["risk_reward_ratio"] is None
+
+
+def test_strong_sell_recommendation_exits_held_position():
+    scores = DummyScores(overall_score=75.0, recommendation="STRONG SELL", confidence=85.0)
+    signal_dict = calculate_trade_signal(
+        _flat_df(742.80), scores,
+        [_zone(730.0, 735.0, "support")], [_zone(800.0, 805.0, "resistance")],
+        DummyRiskProfile(), timeframe="1D", position_status="HOLDING_LONG"
+    )
+
+    assert signal_dict["signal_type"] == "SELL_NOW"
