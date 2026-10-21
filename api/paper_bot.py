@@ -16,8 +16,10 @@ import logging
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timedelta
-from typing import Any, Dict, Iterable, Optional
+from datetime import date, datetime, timedelta
+from typing import Any, Dict, Iterable, Optional, Tuple
+
+import pandas as pd
 
 from analysis import paper_trading as pt
 from api import deps, paper_store
@@ -29,6 +31,10 @@ BOT_INTERVAL = timedelta(minutes=5)
 
 _thread: Optional[threading.Thread] = None
 _stop_event = threading.Event()
+
+# Signals are from yesterday's close, so they only change once a day.
+_signal_cache: Dict[Tuple[str, date], Dict[str, Any]] = {}
+_signal_cache_lock = threading.Lock()
 
 
 # --------------------------------------------------------------------------
@@ -58,7 +64,17 @@ def get_prices(tickers: Iterable[str]) -> Dict[str, float]:
 
 
 def get_signal(ticker: str) -> Optional[Dict[str, Any]]:
-    """The same 1D trade signal the dashboard shows, or None on failure."""
+    """The 1D trade signal as of yesterday's close, or None on failure.
+
+    Today's bar is still forming during the session, so a signal computed on
+    it can flip back and forth through the day; the bot acts on completed
+    bars only. Its target/stop are therefore anchored to yesterday's close.
+    """
+    key = (ticker, paper_store.market_now().date())
+    with _signal_cache_lock:
+        cached = _signal_cache.get(key)
+    if cached is not None:
+        return cached
     from api.routers.analysis import _run_deterministic_pipeline
     try:
         report = _run_deterministic_pipeline(
@@ -72,11 +88,30 @@ def get_signal(ticker: str) -> Optional[Dict[str, Any]]:
             market_downloader=deps.get_market_downloader(),
             interval="1d",
             skip_intelligence=True,
+            as_of_previous_close=True,
         )
     except Exception as e:
         logger.warning(f"Paper bot: signal failed for {ticker}: {e}")
         return None
-    return report.get("trade_signal")
+    signal = report.get("trade_signal")
+    if signal is not None:
+        signal = dict(signal, atr=_atr14(report.get("chart_data") or {}))
+        with _signal_cache_lock:
+            for stale in [k for k in _signal_cache if k[1] != key[1]]:
+                del _signal_cache[stale]
+            _signal_cache[key] = signal
+    return signal
+
+
+def _atr14(chart_data: Dict[str, Any]) -> Optional[float]:
+    """14-day average true range from the report's (completed) daily bars."""
+    try:
+        high, low, close = (pd.Series(chart_data[k], dtype=float) for k in ("high", "low", "close"))
+    except (KeyError, TypeError, ValueError):
+        return None
+    true_range = pd.concat([high - low, (high - close.shift()).abs(), (low - close.shift()).abs()], axis=1).max(axis=1)
+    atr = true_range.rolling(14).mean().iloc[-1] if len(true_range) >= 15 else None
+    return float(atr) if atr is not None and pd.notna(atr) else None
 
 
 def company_name_for(ticker: str) -> Optional[str]:

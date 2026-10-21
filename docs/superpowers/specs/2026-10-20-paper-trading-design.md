@@ -214,3 +214,20 @@ Claude's calls (user can override while reading):
 - Whether a desktop notification fires when the bot trades (nice-to-have via
   the existing `notificationService` when the polled history shows a new bot
   trade).
+
+## Revision 2026-10-21: bot exits and signal timing
+
+A replay of the bot over Jan–Oct 2026 (15 large caps, signals recomputed on
+data up to each prior close) found the engine's fixed levels (stop −0.76%,
+target +2.2%) were stopped out by ordinary daily noise: 30 trades, 8 won,
+−₹10,153. Two changes, bot only (the dashboard signal is unchanged):
+
+- **Signal from yesterday's close.** The bot's signal is computed on completed
+  daily bars only (`_run_deterministic_pipeline(..., as_of_previous_close=True)`),
+  cached once per stock per day, so it can't flip back and forth on a
+  half-formed bar.
+- **ATR-based exits.** Stop = fill − 2×ATR14, target = fill + 1.5×(2×ATR14)
+  (`pt.bot_levels`). Same replay: 16 trades, 7 won, +₹4,720; positive in two of
+  the three 3-month windows. Looser entries (strong ACCUMULATE) and a max-hold
+  exit were also tested and lost money in every combination, so neither was
+  adopted. The sample is small; treat the bot as an experiment.
