@@ -100,9 +100,10 @@ export const PaperBotPanel: React.FC<{ refreshKey?: string }> = ({ refreshKey })
       </div>
 
       <p className="text-xs text-textMuted leading-relaxed">
-        Every 5 minutes during market hours, the bot checks each stock below. When the 1D signal is
-        <span className="text-emerald-400 font-semibold"> BUY NOW</span>, it buys with the signal's target and stop-loss,
-        then sells when either is hit. It only runs while the app's server is awake.
+        During market hours, the bot checks each stock below. When the 1D signal at yesterday's close is
+        <span className="text-emerald-400 font-semibold"> BUY NOW</span>, it buys and sets its own stop-loss 2× the
+        stock's average daily range (ATR) below the price, with a target 1.5× that distance above, then sells when
+        either is hit. It only runs while the app's server is awake.
       </p>
 
       <div>

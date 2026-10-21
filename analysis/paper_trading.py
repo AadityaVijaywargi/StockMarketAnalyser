@@ -24,6 +24,14 @@ MAX_BOT_TICKERS = 15
 # (typically the server was asleep and the price moved on in the meantime).
 GAP_NOTE_PCT = 1.0
 
+# Bot exits, sized to each stock's own volatility (ATR14 from completed daily
+# bars): stop 2 ATR below the fill, target 1.5x that risk above it. A 9-month
+# replay on 15 large caps (Jan-Oct 2026, scratch study) went from -Rs10.2k
+# with the engine's fixed -0.76%/+2.2% levels - stopped out by ordinary daily
+# noise - to +Rs4.7k. The dashboard's own signal levels are unchanged.
+BOT_STOP_ATR = 2.0
+BOT_TARGET_R = 1.5
+
 DEFAULT_BOT_TICKERS = [
     "RELIANCE.NS", "TCS.NS", "INFY.NS", "HDFCBANK.NS", "ICICIBANK.NS",
     "SBIN.NS", "BHARTIARTL.NS", "LT.NS", "ITC.NS", "ASIANPAINT.NS",
@@ -296,6 +304,15 @@ def _bot_sold_today(account: Account, ticker: str, now: datetime) -> bool:
     return False
 
 
+def bot_levels(price: float, atr: Optional[float]) -> Optional[tuple]:
+    """(stop, target) for a bot buy at `price`, or None if they can't be set sensibly."""
+    if atr is None or not math.isfinite(atr) or atr <= 0:
+        return None
+    risk = BOT_STOP_ATR * atr
+    stop, target = round(price - risk, 2), round(price + BOT_TARGET_R * risk, 2)
+    return (stop, target) if 0 < stop < price < target else None
+
+
 def bot_consider(
     account: Account,
     ticker: str,
@@ -316,10 +333,10 @@ def bot_consider(
     if signal_type != "BUY_NOW":
         label = (signal or {}).get("signal") or signal_type or "unavailable"
         return skip(f"Signal is {label}, not BUY NOW.")
-    target = signal.get("target_price")
-    stop = signal.get("stop_loss_price")
-    if target is None or stop is None or not (0 < stop < price < target):
-        return skip("Signal's target/stop don't bracket the current price.")
+    levels = bot_levels(price, signal.get("atr"))
+    if levels is None:
+        return skip("No volatility (ATR) reading to set a stop from.")
+    stop, target = levels
     open_bot = sum(1 for p in account["positions"] if p["owner"] == "BOT")
     if open_bot >= bot["max_positions"]:
         return skip(f"Already at the max of {bot['max_positions']} bot positions.")

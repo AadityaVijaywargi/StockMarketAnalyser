@@ -198,7 +198,7 @@ def test_no_exit_between_levels_or_without_quote():
 # Bot decisions
 # --------------------------------------------------------------------------
 
-BUY_SIGNAL = {"signal_type": "BUY_NOW", "target_price": 1100.0, "stop_loss_price": 950.0}
+BUY_SIGNAL = {"signal_type": "BUY_NOW", "atr": 25.0}  # stop 1000 - 2*25, target 1000 + 1.5*50
 
 
 def bot_account():
@@ -213,7 +213,7 @@ def test_bot_buys_on_buy_signal_with_budget_sizing():
     assert result["action"] == "BUY"
     pos = position(acc, "SBIN.NS", "BOT")
     assert pos["quantity"] == 100  # floor(100000 / 1000)
-    assert pos["target"] == 1100.0 and pos["stop"] == 950.0
+    assert pos["target"] == 1075.0 and pos["stop"] == 950.0
     assert acc["trades"][0]["reason"] == "BOT_SIGNAL"
     assert acc["bot"]["log"][0]["action"] == "BUY"
 
@@ -226,12 +226,25 @@ def test_bot_skips_non_buy_signal():
     assert acc["bot"]["log"][0]["action"] == "SKIP"
 
 
-def test_bot_skips_invalid_levels():
+def test_bot_skips_without_a_usable_atr():
     acc = bot_account()
-    bad = dict(BUY_SIGNAL, stop_loss_price=1010.0)
-    assert pt.bot_consider(acc, "SBIN.NS", bad, 1000.0, NOW)["action"] == "SKIP"
-    missing = dict(BUY_SIGNAL, target_price=None)
-    assert pt.bot_consider(acc, "SBIN.NS", missing, 1000.0, NOW)["action"] == "SKIP"
+    for atr in (None, 0.0, -5.0, float("nan"), 600.0):  # 600: stop would be below zero
+        assert pt.bot_consider(acc, "SBIN.NS", dict(BUY_SIGNAL, atr=atr), 1000.0, NOW)["action"] == "SKIP"
+    assert acc["positions"] == []
+
+
+def test_bot_levels_ignore_the_signal_levels():
+    # The engine's own (tight) levels are for the dashboard; the bot sizes its own from ATR.
+    acc = bot_account()
+    signal = dict(BUY_SIGNAL, target_price=1022.0, stop_loss_price=992.4)
+    pt.bot_consider(acc, "SBIN.NS", signal, 1000.0, NOW)
+    pos = position(acc, "SBIN.NS", "BOT")
+    assert (pos["stop"], pos["target"]) == (950.0, 1075.0)
+
+
+def test_bot_levels():
+    assert pt.bot_levels(2000.0, 30.0) == (1940.0, 2090.0)
+    assert pt.bot_levels(2000.0, None) is None
 
 
 def test_bot_skips_already_held_and_max_positions():

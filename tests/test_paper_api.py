@@ -183,7 +183,7 @@ def test_reset(market):
 def test_tick_runs_bot_and_exits(market):
     c = client_for()
     c.put("/paper/bot", json={"enabled": True, "tickers": ["SBIN.NS", "INFY.NS"]})
-    market.signals["SBIN.NS"] = {"signal_type": "BUY_NOW", "target_price": 1100.0, "stop_loss_price": 950.0}
+    market.signals["SBIN.NS"] = {"signal_type": "BUY_NOW", "atr": 25.0}
 
     paper_bot.tick(OPEN)
     body = c.get("/paper/account").json()
@@ -204,7 +204,7 @@ def test_tick_runs_bot_and_exits(market):
 def test_tick_does_nothing_when_market_closed(market):
     c = client_for()
     c.put("/paper/bot", json={"enabled": True, "tickers": ["SBIN.NS"]})
-    market.signals["SBIN.NS"] = {"signal_type": "BUY_NOW", "target_price": 1100.0, "stop_loss_price": 950.0}
+    market.signals["SBIN.NS"] = {"signal_type": "BUY_NOW", "atr": 25.0}
     paper_bot.tick(CLOSED)
     assert c.get("/paper/bot").json()["bot"]["log"] == []
 

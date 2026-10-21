@@ -1,5 +1,7 @@
 import time
 import logging
+import shutil
+import tempfile
 from typing import List, Dict, Any, Optional, Tuple
 from fastapi import APIRouter, Depends, Query, Body, HTTPException
 from datetime import datetime, time as dt_time, timedelta
@@ -207,6 +209,17 @@ def fetch_live_quote(ticker: str, live_cache: InMemoryLiveCache, cache: Optional
 
 
 
+def _completed_bars(df: Optional[pd.DataFrame], today=None) -> Optional[pd.DataFrame]:
+    """Drops today's (market date) bar, which is still forming during the session."""
+    if df is None or df.empty:
+        return df
+    today = today or datetime.now(pytz.timezone(settings.MARKET_TIMEZONE)).date()
+    index = pd.DatetimeIndex(df.index)
+    if index.tz is not None:
+        index = index.tz_convert(settings.MARKET_TIMEZONE)
+    return df[index.date < today]
+
+
 def _run_deterministic_pipeline(
     ticker: str,
     downloader: YahooDownloader,
@@ -219,7 +232,8 @@ def _run_deterministic_pipeline(
     interval: str = "1d",
     debug_mode: bool = False,
     force_refresh: bool = False,
-    skip_intelligence: bool = False
+    skip_intelligence: bool = False,
+    as_of_previous_close: bool = False
 ) -> Dict[str, Any]:
     """Helper that runs the complete frozen deterministic pipeline for a stock.
 
@@ -228,6 +242,13 @@ def _run_deterministic_pipeline(
     scan, which calls this once per stock in the catalog and doesn't need
     per-stock news for a quick score-ranked list, unlike a single-ticker
     /analyze call where that context matters.
+
+    as_of_previous_close=True computes everything from completed daily bars
+    only: today's still-forming bar is dropped from the stock and index data,
+    features are built in a throwaway store (the shared one outer-joins its
+    saved rows back in, today's included), and neither the analysis cache nor
+    the LLM report is touched. Used by the paper-trading bot so its decisions
+    match "signal at yesterday's close, act at today's open".
     """
     # Suffix safety append using TickerNormalizer
     from analysis.normalizer import TickerNormalizer
@@ -240,7 +261,7 @@ def _run_deterministic_pipeline(
         raise TickerValidationError(f"Invalid ticker symbol format: '{ticker}'")
 
     # Check Analysis Cache first
-    cached_report = None if force_refresh else live_cache.get_analysis(processed_ticker, interval)
+    cached_report = None if (force_refresh or as_of_previous_close) else live_cache.get_analysis(processed_ticker, interval)
     if cached_report is not None:
         logger.info(f"Analysis cache HIT for {processed_ticker} ({interval})")
         quote = fetch_live_quote(processed_ticker, live_cache)
@@ -309,6 +330,10 @@ def _run_deterministic_pipeline(
         stock_df.loc[stock_df.index[-1], "Low"] = min(stock_df["Low"].iloc[-1], quote["low"])
         stock_df.loc[stock_df.index[-1], "Volume"] = max(stock_df["Volume"].iloc[-1], quote["volume"])
         
+    if as_of_previous_close:
+        stock_df = _completed_bars(stock_df)
+        feature_store = FeatureStore(features_dir=tempfile.mkdtemp(prefix="stonks_prev_close_"))
+
     # Enforce minimum history length
     if len(stock_df) < 250:
         raise InsufficientDataError(processed_ticker, len(stock_df))
@@ -361,6 +386,9 @@ def _run_deterministic_pipeline(
     sector_symbol = SECTOR_MAP.get(processed_ticker, DEFAULT_BENCHMARK_INDEX)
     sector_name = SECTOR_NAMES.get(sector_symbol, "General Market")
     sector_df = market_downloader.get_index_data(sector_symbol)
+    if as_of_previous_close:
+        nifty_df, bank_nifty_df, vix_df, sector_df = (
+            _completed_bars(df) for df in (nifty_df, bank_nifty_df, vix_df, sector_df))
     
     # Run macro contexts
     nifty_trend = IndexTrendModel(**analyze_index_trend(nifty_df, DEFAULT_BENCHMARK_INDEX))
@@ -514,6 +542,10 @@ def _run_deterministic_pipeline(
     except Exception as pred_err:
         logger.warning(f"Failed to generate prediction for {processed_ticker}: {pred_err}")
     
+    if as_of_previous_close:
+        shutil.rmtree(feature_store.features_dir, ignore_errors=True)
+        return result
+
     # Run the LLM Report Generator Layer (Grounding + Explainability)
     try:
         t_llm = time.time()
